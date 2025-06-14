@@ -1,69 +1,77 @@
-// src/components/WeatherDisplay.jsx
 import React, { useEffect, useState } from 'react';
-import { Card, ButtonGroup, Button } from 'react-bootstrap';
+import { Card, Button } from 'react-bootstrap';
 
 export default function WeatherDisplay({ lat, lon }) {
-  const [weather, setWeather] = useState(null);
-  const [units,   setUnits]   = useState('metric'); // 'metric' or 'imperial'
+  const [data, setData] = useState(null);
+  const [units, setUnits] = useState('metric');
 
-  // 1) Fetch once in metric
   useEffect(() => {
     if (!lat || !lon) return;
+
     fetch(
-      `https://api.openweathermap.org/data/2.5/weather` +
-      `?lat=${lat}&lon=${lon}` +
-      `&units=metric` +                              // always metric here
-      `&appid=${import.meta.env.VITE_OPENWEATHER_API_KEY}`
+      `https://api.openweathermap.org/data/2.5/weather?lat=${lat}&lon=${lon}&units=${units}&appid=${import.meta.env.VITE_OPENWEATHER_API_KEY}`
     )
-    .then(res => res.json())
-    .then(data => setWeather(data))
-    .catch(console.error);
-  }, [lat, lon]);
+      .then((res) => res.json())
+      .then((json) => {
+        setData({
+          temp: Math.round(json.main.temp),
+          feelsLike: Math.round(json.main.feels_like),
+          condition: json.weather[0].description,
+          humidity: json.main.humidity,
+          wind: (json.wind.speed * (units === 'metric' ? 3.6 : 1)).toFixed(1),
+          precip: json.rain?.['1h'] ?? 0,
+          timezone: json.timezone
+        });
+      })
+      .catch(console.error);
+  }, [lat, lon, units]);
 
-  if (!weather) return null;
+  if (!data) return null;
 
-  // 2) Temperature conversion
-  const celsius = weather.main.temp;
-  const temp =
-    units === 'metric'
-      ? Math.round(celsius)
-      : Math.round((celsius * 9) / 5 + 32);
+  const { temp, feelsLike, condition, humidity, wind, precip, timezone } = data;
 
-  // 3) Local time computation
-  const utcMs      = weather.dt * 1000;          // UTC timestamp in ms
-  const offsetMs   = weather.timezone * 1000;    // timezone offset in ms
-  const cityDate   = new Date(utcMs + offsetMs);
-  const hours24    = cityDate.getUTCHours();
-  const minutes    = cityDate.getUTCMinutes();
-  const hour12     = hours24 % 12 || 12;
-  const ampm       = hours24 < 12 ? 'a.m.' : 'p.m.';
-  const minuteStr  = String(minutes).padStart(2, '0');
-  const localTime  = `${hour12}:${minuteStr} ${ampm}`;
+  const nowUTC = Date.now();
+  const localTimestamp = nowUTC + (timezone * 1000);
+  const localDate = new Date(localTimestamp);
 
-  const description = weather.weather[0].description;
+  const localTime = localDate.toLocaleTimeString('en-US', {
+    hour: '2-digit',
+    minute: '2-digit',
+    hour12: true,
+    timeZone: 'UTC'
+  });
+
+  const localDateStr = localDate.toLocaleDateString('en-US', {
+    weekday: 'short',
+    year: 'numeric',
+    month: 'short',
+    day: 'numeric',
+    timeZone: 'UTC'
+  });
 
   return (
     <Card className="my-4 p-3 text-center">
-      <h6 className="text-muted">Local time: {localTime}</h6>
-      <h2>
-        {temp}°{units === 'metric' ? 'C' : 'F'}
-      </h2>
-      <p className="text-capitalize">{description}</p>
+      <small>{localDateStr} — Local time: {localTime}</small>
+      <h2>{temp}°{units === 'metric' ? 'C' : 'F'}</h2>
+      <p className="text-capitalize">{condition}</p>
 
-      <ButtonGroup className="mb-2">
-        <Button
-          variant={units === 'metric' ? 'primary' : 'outline-primary'}
-          onClick={() => setUnits('metric')}
-        >
-          °C
-        </Button>
-        <Button
-          variant={units === 'imperial' ? 'primary' : 'outline-primary'}
-          onClick={() => setUnits('imperial')}
-        >
-          °F
-        </Button>
-      </ButtonGroup>
+      <div style={{
+        display: 'grid',
+        gridTemplateColumns: '1fr 1fr',
+        gap: '8px',
+        fontSize: '0.9rem',
+        marginTop: '10px'
+      }}>
+        <div>Feels like:</div><div>{feelsLike}°{units === 'metric' ? 'C' : 'F'}</div>
+        <div>Humidity:</div><div>{humidity}%</div>
+        <div>Wind:</div><div>{wind} {units === 'metric' ? 'km/h' : 'mph'}</div>
+        <div>Precipitation:</div><div>{precip} mm</div>
+      </div>
+
+      <div className="mt-3">
+        <Button variant={units === 'metric' ? 'primary' : 'outline-primary'} onClick={() => setUnits('metric')}>°C</Button>{' '}
+        <Button variant={units === 'imperial' ? 'primary' : 'outline-primary'} onClick={() => setUnits('imperial')}>°F</Button>
+      </div>
     </Card>
   );
 }
