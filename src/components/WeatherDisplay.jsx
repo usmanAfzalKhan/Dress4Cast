@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import getWeather from '../utils/getWeather.js';
 
-// WeatherDisplay with dynamic theming and precise 12‑hr clock, updated every minute
+// WeatherDisplay with dynamic theming and precise local 12-hr clock, updated every minute
 export default function WeatherDisplay({ location }) {
   const [weather, setWeather] = useState(null);
   const [error, setError]     = useState('');
@@ -36,7 +36,7 @@ export default function WeatherDisplay({ location }) {
     })();
   }, [location, unit]);
 
-  // Update clock every 60s
+  // Update clock every minute
   useEffect(() => {
     const id = setInterval(() => setNow(Date.now()), 60000);
     return () => clearInterval(id);
@@ -47,11 +47,13 @@ export default function WeatherDisplay({ location }) {
   if (error)      return <p style={styles.error}>Error: {error}</p>;
   if (!weather)   return <p style={styles.message}>Loading weather…</p>;
 
-  // Calculate target local time using UTC epoch + tz offset
-  const targetMs = now + weather.tz * 1000;
+  // Calculate precise local time for target location
+  // Use UTC ms directly, add target timezone offset
+  const utcMs    = now;
+  const targetMs = utcMs + weather.tz * 1000;
   const dt       = new Date(targetMs);
 
-  // Format 12‑hr clock
+  // Format 12-hour clock
   const hours   = dt.getUTCHours();
   const minutes = dt.getUTCMinutes();
   const ampm    = hours >= 12 ? 'PM' : 'AM';
@@ -64,7 +66,7 @@ export default function WeatherDisplay({ location }) {
     weekday: 'short', month: 'short', day: 'numeric'
   });
 
-  // Determine condition theme
+  // Determine weather condition theme
   const cond = weather.condition.toLowerCase();
   let theme = 'default';
   if (cond.includes('clear'))     theme = 'sunny';
@@ -73,15 +75,15 @@ export default function WeatherDisplay({ location }) {
   else if (cond.includes('snow'))  theme = 'snowy';
   else if (['haze','mist','fog'].some(k => cond.includes(k))) theme = 'hazy';
 
-  // Time-of-day overlay
+  // Determine time-of-day overlay
   let timeTheme = 'day';
-  if (hours < 5)                     timeTheme = 'night';
-  else if (hours < 8)                timeTheme = 'morning';
-  else if (hours < 18)               timeTheme = 'day';
-  else if (hours < 20)               timeTheme = 'evening';
-  else                                timeTheme = 'night';
+  if (hours < 5)                   timeTheme = 'night';
+  else if (hours < 8)              timeTheme = 'morning';
+  else if (hours < 18)             timeTheme = 'day';
+  else if (hours < 20)             timeTheme = 'evening';
+  else                              timeTheme = 'night';
 
-  // Backgrounds & overlays
+  // Background gradients & overlays
   const themes = {
     sunny:   'linear-gradient(135deg, #FFE57F, #FFD740)',
     cloudy:  'linear-gradient(135deg, #ECEFF1, #CFD8DC)',
@@ -101,7 +103,7 @@ export default function WeatherDisplay({ location }) {
   const overlay    = overlays[timeTheme];
   const textColor  = theme === 'rainy' ? '#022F40' : '#333';
 
-  // Round values
+  // Round display values
   const tempRounded   = Math.round(weather.temp);
   const feelsRounded  = Math.round(weather.feels_like);
   const precipRounded = weather.precipitation;
