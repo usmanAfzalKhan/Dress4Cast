@@ -1,78 +1,69 @@
-// src/components/SearchBar.jsx
-import React, { useState } from 'react';
-import { useCombobox } from 'downshift';
-import { Form, ListGroup, Button, InputGroup } from 'react-bootstrap';
+import React, { useState, useEffect } from 'react';
+import getGeo from '../utils/getGeo.js';
 
-console.log('Env key:', import.meta.env.VITE_OPENWEATHER_API_KEY);
+export default function SearchBar({ onSelectLocation }) {
+  const [query, setQuery]           = useState('');
+  const [suggestions, setSuggestions] = useState([]);
+  const [error, setError]           = useState('');
 
+  // Fetch suggestions as user types
+  useEffect(() => {
+    if (!query) return setSuggestions([]);
+    let alive = true;
+    getGeo(query, 5)
+      .then(results => { if (alive) setSuggestions(results); })
+      .catch(() => {/* ignore */});
+    return () => { alive = false; };
+  }, [query]);
 
-export default function SearchBar({ onSelect }) {
-  const [items, setItems] = useState([]);
-
-  const {
-    isOpen,
-    getMenuProps,
-    getInputProps,
-    getItemProps,
-    highlightedIndex,
-    openMenu,
-  } = useCombobox({
-    items,
-    onInputValueChange: async ({ inputValue }) => {
-      if (!inputValue || inputValue.length < 2) {
-        setItems([]);
-        return;
-      }
-
-      try {
-        const res = await fetch(
-          `https://api.openweathermap.org/geo/1.0/direct?q=${encodeURIComponent(
-            inputValue
-          )}&limit=5&appid=${import.meta.env.VITE_OPENWEATHER_API_KEY}`
-        );
-        const data = await res.json();
-
-        if (Array.isArray(data)) {
-          setItems(data);
-        } else {
-          setItems([]);
-          console.warn('Geocode API returned error:', data);
-        }
-      } catch (err) {
-        console.error('Network error fetching geocode:', err);
-        setItems([]);
-      }
-      // —→ end replacement
-    },
-    onSelectedItemChange: ({ selectedItem }) => {
-      if (selectedItem) onSelect(selectedItem);
-    },
-    itemToString: (item) => (item ? `${item.name}, ${item.country}` : ''),
-  });
+  const choose = loc => {
+    const label = `${loc.name}${loc.state?`, ${loc.state}`:''}, ${loc.country}`;
+    onSelectLocation({ lat: loc.lat, lon: loc.lon, label });
+    setQuery(label);
+    setSuggestions([]);
+  };
 
   return (
-    <div className="position-relative mb-3">
-      <InputGroup>
-        <Form.Control
-          {...getInputProps({ placeholder: 'Search city…', onFocus: openMenu })}
-        />
-        <Button variant="dark" onClick={() => items[0] && onSelect(items[0])}>
-          Go
-        </Button>
-      </InputGroup>
-      <ListGroup {...getMenuProps()} className="position-absolute w-100" style={{ zIndex: 1000 }}>
-        {isOpen &&
-          items.map((item, index) => (
-            <ListGroup.Item
-              key={`${item.name}-${index}`}
-              {...getItemProps({ item, index })}
-              active={highlightedIndex === index}
-              action
+    <div style={{ position: 'relative', marginBottom: 16 }}>
+      <input
+        type="text"
+        value={query}
+        onChange={e => { setQuery(e.target.value); setError(''); }}
+        placeholder="Enter city"
+        style={{ width:'100%', padding:'8px', borderRadius:4, border:'1px solid #ccc' }}
+      />
+      <button
+        onClick={() => suggestions[0]? choose(suggestions[0]) : setError('No match')}
+        style={{
+          position:'absolute', right:0, top:0, bottom:0,
+          padding:'0 12px', background:'#007bff', color:'#fff', border:'none', borderRadius:'0 4px 4px 0'
+        }}
+      >
+        Go
+      </button>
+
+      {suggestions.length > 0 && (
+        <ul style={{
+          listStyle:'none', margin:0, padding:0,
+          position:'absolute', top:'100%', left:0, right:0,
+          background:'#fff', border:'1px solid #ccc', zIndex:10
+        }}>
+          {suggestions.map((s,i) => (
+            <li
+              key={`${s.lat}-${s.lon}-${i}`}
+              onClick={() => choose(s)}
+              style={{
+                padding:'8px', cursor:'pointer',
+                borderBottom: i<suggestions.length-1 ? '1px solid #eee' : 'none'
+              }}
             >
-              {item.name}, {item.country}
-            </ListGroup.Item>
+              {s.name}{s.state?`, ${s.state}`:''}, {s.country}
+            </li>
           ))}
-      </ListGroup>
+        </ul>
+      )}
+
+      {error && <div style={{ color:'red', marginTop:4 }}>{error}</div>}
     </div>
   );
 }

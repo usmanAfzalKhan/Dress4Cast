@@ -1,77 +1,112 @@
-import React, { useEffect, useState } from 'react';
-import { Card, Button } from 'react-bootstrap';
+// src/components/WeatherDisplay.jsx
 
-export default function WeatherDisplay({ lat, lon }) {
-  const [data, setData] = useState(null);
-  const [units, setUnits] = useState('metric');
+import React, { useState, useEffect } from 'react';
+import getOutfit from '../utils/getOutfit.js';
 
+export default function WeatherDisplay({ location }) {
+  const [weather, setWeather] = useState(null);
+  const [error, setError]     = useState('');
+  const [unit, setUnit]       = useState('metric');
+  const [gender, setGender]   = useState('male');
+  const [modesty, setModesty] = useState('modest');
+
+  // Fetch current weather from OpenWeatherMap
   useEffect(() => {
-    if (!lat || !lon) return;
+    if (!location) return;
+    setError('');
+    setWeather(null);
 
-    fetch(
-      `https://api.openweathermap.org/data/2.5/weather?lat=${lat}&lon=${lon}&units=${units}&appid=${import.meta.env.VITE_OPENWEATHER_API_KEY}`
-    )
-      .then((res) => res.json())
-      .then((json) => {
-        setData({
-          temp: Math.round(json.main.temp),
-          feelsLike: Math.round(json.main.feels_like),
-          condition: json.weather[0].description,
-          humidity: json.main.humidity,
-          wind: (json.wind.speed * (units === 'metric' ? 3.6 : 1)).toFixed(1),
-          precip: json.rain?.['1h'] ?? 0,
-          timezone: json.timezone
+    (async () => {
+      try {
+        const API_KEY = import.meta.env.VITE_OPENWEATHER_API_KEY;
+        const url = `https://api.openweathermap.org/data/2.5/weather` +
+                    `?lat=${location.lat}&lon=${location.lon}` +
+                    `&units=${unit}&appid=${API_KEY}`;
+        const res = await fetch(url);
+        if (!res.ok) {
+          const text = await res.text();
+          throw new Error(`Weather API error ${res.status}: ${text}`);
+        }
+        const data = await res.json();
+        setWeather({
+          temp:            data.main.temp,
+          feels_like:      data.main.feels_like,
+          weather:         data.weather,
+          dt:              data.dt,
+          timezone_offset: data.timezone
         });
-      })
-      .catch(console.error);
-  }, [lat, lon, units]);
+      } catch (e) {
+        console.error(e);
+        setError(e.message);
+      }
+    })();
+  }, [location, unit]);
 
-  if (!data) return null;
+  // UI states
+  if (!location) {
+    return <div className="weather-display">Search for a city…</div>;
+  }
+  if (error) {
+    return <div className="weather-display error">Error: {error}</div>;
+  }
+  if (!weather) {
+    return <div className="weather-display">Loading weather…</div>;
+  }
 
-  const { temp, feelsLike, condition, humidity, wind, precip, timezone } = data;
-
-  const nowUTC = Date.now();
-  const localTimestamp = nowUTC + (timezone * 1000);
-  const localDate = new Date(localTimestamp);
-
-  const localTime = localDate.toLocaleTimeString('en-US', {
-    hour: '2-digit',
-    minute: '2-digit',
-    hour12: true,
-    timeZone: 'UTC'
+  // Compute local date & time
+  const localMs   = (weather.dt + weather.timezone_offset) * 1000;
+  const localDate = new Date(localMs);
+  const timeStr   = localDate.toLocaleTimeString('en-US', {
+    hour: '2-digit', minute: '2-digit', hour12: true, timeZone: 'UTC'
+  });
+  const dateStr   = localDate.toLocaleDateString('en-US', {
+    weekday: 'short', month: 'short', day: 'numeric', year: 'numeric', timeZone: 'UTC'
   });
 
-  const localDateStr = localDate.toLocaleDateString('en-US', {
-    weekday: 'short',
-    year: 'numeric',
-    month: 'short',
-    day: 'numeric',
-    timeZone: 'UTC'
-  });
+  const temp      = Math.round(weather.temp);
+  const condition = weather.weather[0].description;
+
+  // Step 2: Build two image URLs (primary and fallback)
+  const { primaryPath, fallbackPath } = getOutfit(
+    gender,
+    modesty,
+    temp,
+    condition
+  );
 
   return (
-    <Card className="my-4 p-3 text-center">
-      <small>{localDateStr} — Local time: {localTime}</small>
-      <h2>{temp}°{units === 'metric' ? 'C' : 'F'}</h2>
+    <div className="weather-display">
+      <small>{dateStr} — Local time: {timeStr}</small>
+
+      <h2>
+        {temp}°{unit === 'metric' ? 'C' : 'F'}
+      </h2>
       <p className="text-capitalize">{condition}</p>
 
-      <div style={{
-        display: 'grid',
-        gridTemplateColumns: '1fr 1fr',
-        gap: '8px',
-        fontSize: '0.9rem',
-        marginTop: '10px'
-      }}>
-        <div>Feels like:</div><div>{feelsLike}°{units === 'metric' ? 'C' : 'F'}</div>
-        <div>Humidity:</div><div>{humidity}%</div>
-        <div>Wind:</div><div>{wind} {units === 'metric' ? 'km/h' : 'mph'}</div>
-        <div>Precipitation:</div><div>{precip} mm</div>
+      {/* Step 3: Gender & Modesty toggles */}
+      <div className="controls">
+        <button onClick={() => setUnit(u => u === 'metric' ? 'imperial' : 'metric')}>
+          Switch to {unit === 'metric' ? '°F' : '°C'}
+        </button>
+        <button onClick={() => setGender(g => g === 'male' ? 'female' : 'male')}>
+          {gender === 'male' ? 'Switch to Female' : 'Switch to Male'}
+        </button>
+        <button onClick={() => setModesty(m => m === 'modest' ? 'unmodest' : 'modest')}>
+          {modesty === 'modest' ? 'Switch to Unmodest' : 'Switch to Modest'}
+        </button>
       </div>
 
-      <div className="mt-3">
-        <Button variant={units === 'metric' ? 'primary' : 'outline-primary'} onClick={() => setUnits('metric')}>°C</Button>{' '}
-        <Button variant={units === 'imperial' ? 'primary' : 'outline-primary'} onClick={() => setUnits('imperial')}>°F</Button>
+      {/* Outfit image with fallback */}
+      <div className="outfit-image">
+        <img
+          src={primaryPath}
+          alt="Outfit Suggestion"
+          onError={e => {
+            e.target.onerror = null;
+            e.target.src = fallbackPath;
+          }}
+        />
       </div>
-    </Card>
+    </div>
   );
 }
