@@ -1,148 +1,138 @@
-import React, { useState, useEffect } from 'react';
+// src/components/WeatherDisplay.jsx
+import React, { useState, useEffect, useCallback } from 'react';
 import getWeather from '../utils/getWeather.js';
 
-// WeatherDisplay with auto-refresh every 5 minutes, last-updated tag, live clock and dynamic theming
-export default function WeatherDisplay({ location, unit, onToggleUnit }) {
-  const [weather, setWeather]     = useState(null);
-  const [error, setError]         = useState('');
-  const [now, setNow]             = useState(Date.now());
-  const [lastFetch, setLastFetch] = useState(null);
+const ICON_MAP = {
+  clear:        '/assets/icons/sun.svg',
+  clouds:       '/assets/icons/cloud.svg',
+  rain:         '/assets/icons/rain.svg',
+  drizzle:      '/assets/icons/rain.svg',
+  snow:         '/assets/icons/snowflake.svg',
+  thunderstorm: '/assets/icons/thunder.svg',
+  mist:         '/assets/icons/fog.svg',
+  fog:          '/assets/icons/fog.svg',
+  haze:         '/assets/icons/fog.svg',
+};
 
-  // Fetch once + every 5m
-  useEffect(() => {
+export default function WeatherDisplay({ location, unit, onToggleUnit }) {
+  const [weather,   setWeather]   = useState(null);
+  const [error,     setError]     = useState('');
+  const [lastFetch, setLastFetch] = useState(null);
+  const [now,       setNow]       = useState(Date.now());
+
+  // fetch logic
+  const fetchWeather = useCallback(async () => {
     if (!location) return;
-    setError(''); setWeather(null);
-    const fetchWeather = async () => {
-      try {
-        const data = await getWeather(location.lat, location.lon, unit);
-        setWeather(data);
-        setLastFetch(Date.now());
-      } catch (e) {
-        setError(e.message);
-      }
-    };
-    fetchWeather();
-    const id = setInterval(fetchWeather, 5 * 60 * 1000);
-    return () => clearInterval(id);
+    try {
+      const data = await getWeather(location.lat, location.lon, unit);
+      setWeather(data);
+      setLastFetch(Date.now());
+      setError('');
+    } catch (e) {
+      setError(e.message);
+    }
   }, [location, unit]);
 
-  // Tick clock each minute
+  // initial fetch & refetch on location/unit change
   useEffect(() => {
-    const id = setInterval(() => setNow(Date.now()), 60 * 1000);
+    setWeather(null);
+    setLastFetch(null);
+    fetchWeather();
+  }, [fetchWeather]);
+
+  // auto-refresh every 5 minutes
+  useEffect(() => {
+    if (!location) return;
+    const id = setInterval(fetchWeather, 300_000);
+    return () => clearInterval(id);
+  }, [location, fetchWeather]);
+
+  // tick every second for real-time clock
+  useEffect(() => {
+    const id = setInterval(() => setNow(Date.now()), 1_000);
     return () => clearInterval(id);
   }, []);
 
-  if (!location) return <p style={styles.message}>Search for a city…</p>;
-  if (error)      return <p style={styles.error}>Error: {error}</p>;
-  if (!weather)   return <p style={styles.message}>Loading weather…</p>;
+  if (!location) return null;
+  if (error)     return <div style={styles.error}>Error: {error}</div>;
+  if (!weather)  return <div style={styles.message}>Loading weather…</div>;
 
-  // Compute local time for target
-  const targetMs = now + weather.tz * 1000;
-  const dt       = new Date(targetMs);
-  let  hh = dt.getUTCHours(), mm = dt.getUTCMinutes();
-  const ampm = hh >= 12 ? 'PM' : 'AM';
-  hh = hh % 12 === 0 ? 12 : hh % 12;
-  const minuteP = mm < 10 ? '0'+mm : mm;
-  const timeStr = `${hh}:${minuteP} ${ampm}`;
-  const dateStr = dt.toLocaleDateString('en-US',{
-    weekday:'short',month:'short',day:'numeric'
-  });
+  // 1) compute remote-local "now"
+  const remoteNowMs = now + weather.timezone * 1000;
+  const dt          = new Date(remoteNowMs);
 
-  // Last-updated text
-  const diffMin = lastFetch ? Math.floor((now - lastFetch)/60000) : 0;
-  const updatedStr = lastFetch
-    ? `Updated ${diffMin} minute${diffMin===1?'':'s'} ago`
-    : '';
+  // 2) format date/time
+  const days   = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
+  const months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+  const dayStr = days[dt.getUTCDay()];
+  const monStr = months[dt.getUTCMonth()];
+  const date   = dt.getUTCDate();
+  let hh       = dt.getUTCHours();
+  const mm     = dt.getUTCMinutes().toString().padStart(2,'0');
+  const ampm   = hh >= 12 ? 'PM' : 'AM';
+  hh           = hh % 12 || 12;
+  const dateStr = `${dayStr}, ${monStr} ${date}`;
+  const timeStr = `${hh}:${mm} ${ampm}`;
 
-  // Theming
-  const cond = weather.condition.toLowerCase();
-  let theme = 'default';
-  if (cond.includes('clear'))     theme='sunny';
-  else if (cond.includes('cloud')) theme='cloudy';
-  else if (cond.includes('rain'))  theme='rainy';
-  else if (cond.includes('snow'))  theme='snowy';
-  else if (['haze','mist','fog'].some(k=>cond.includes(k))) theme='hazy';
+  // 3) minutes since fetch
+  const minsAgo = Math.max(0, Math.round((now - lastFetch) / 60_000));
+  const updatedStr = minsAgo === 0
+    ? 'Updated just now'
+    : `Updated ${minsAgo} minute${minsAgo>1?'s':''} ago`;
 
-  // Time-of-day overlay
-  let tod='day';
-  const rawH = dt.getUTCHours();
-  if (rawH<5)       tod='night';
-  else if (rawH<8)  tod='morning';
-  else if (rawH<18) tod='day';
-  else if (rawH<20) tod='evening';
-  else              tod='night';
-
-  const themes = {
-    sunny:  'linear-gradient(135deg,#FFE57F,#FFD740)',
-    cloudy: 'linear-gradient(135deg,#ECEFF1,#CFD8DC)',
-    rainy:  'linear-gradient(135deg,#81D4FA,#4FC3F7)',
-    snowy:  'linear-gradient(135deg,#E1F5FE,#B3E5FC)',
-    hazy:   'linear-gradient(135deg,#CFD8DC,#B0BEC5)',
-    default:'linear-gradient(135deg,#FDFDFD,#ECEFF1)'
-  };
-  const overlays = {
-    morning:'rgba(255,235,59,0.2)',
-    day:    'rgba(255,255,255,0)',
-    evening:'rgba(255,183,77,0.3)',
-    night:  'rgba(33,33,33,0.4)'
-  };
-  const bg       = themes[theme];
-  const overlay  = overlays[tod];
-  const textColor= theme==='rainy'?'#022F40':'#333';
-
-  // Round values
-  const t0 = Math.round(weather.temp);
-  const f0 = Math.round(weather.feels_like);
-  const p0 = weather.precipitation;
+  // 4) icon + tint
+  const key      = weather.weather[0].main.toLowerCase();
+  const iconSrc  = ICON_MAP[key] || ICON_MAP.clouds;
+  const filter   = key==='clear'
+    ? (dt.getUTCHours()>=6 && dt.getUTCHours()<18
+       ? 'invert(60%) sepia(80%) saturate(500%) hue-rotate(5deg)'
+       : 'invert(20%) sepia(10%) saturate(200%) hue-rotate(180deg)')
+    : 'invert(70%) sepia(10%) saturate(200%) hue-rotate(180deg)';
 
   return (
-    <div style={{
-      ...styles.card,
-      background:        bg,
-      backgroundColor:   overlay,
-      backgroundBlendMode:'overlay',
-      color:             textColor
-    }}>
+    <div style={styles.card}>
       <header style={styles.header}>
         <div>
-          <p style={styles.date}>{dateStr}</p>
-          <p style={styles.time}>{timeStr}</p>
-          {updatedStr && <p style={styles.updated}>{updatedStr}</p>}
+          <div style={styles.dateTime}>{dateStr}</div>
+          <div style={styles.dateTime}>{timeStr}</div>
+          <div style={styles.updated}>{updatedStr}</div>
         </div>
-        <button
-          style={{ ...styles.toggle, borderColor:textColor, color:textColor }}
-          onClick={()=> onToggleUnit(unit==='metric'?'imperial':'metric')}
-        >
+        <button onClick={onToggleUnit} style={styles.toggle}>
           °{unit==='metric'?'F':'C'}
         </button>
       </header>
 
-      <div style={styles.main}>
-        <h1 style={styles.temp}>{t0}°{unit==='metric'?'C':'F'}</h1>
-        <p style={styles.condition}>{weather.condition}</p>
+      <div style={styles.iconWrap}>
+        <img src={iconSrc} alt={weather.weather[0].description}
+             style={{ ...styles.icon, filter }} />
+      </div>
+
+      <div style={styles.mainTemp}>
+        {Math.round(weather.main.temp)}°
+        {unit==='metric'?'C':'F'}
+      </div>
+      <div style={styles.condition}>
+        {weather.weather[0].description}
       </div>
 
       <div style={styles.detailsRow}>
-        <div style={{...styles.detailBox,borderColor:textColor}}>
-          <p style={styles.detailLabel}>Feels like</p>
-          <p style={styles.detailValue}>{f0}°</p>
+        <div style={styles.detail}>
+          <strong>Feels like</strong>
+          <div>{Math.round(weather.main.feels_like)}°</div>
         </div>
-        <div style={{...styles.detailBox,borderColor:textColor}}>
-          <p style={styles.detailLabel}>Humidity</p>
-          <p style={styles.detailValue}>{weather.humidity}%</p>
+        <div style={styles.detail}>
+          <strong>Humidity</strong>
+          <div>{weather.main.humidity}%</div>
         </div>
       </div>
-
       <div style={styles.detailsRow}>
-        <div style={{...styles.detailBox,borderColor:textColor}}>
-          <p style={styles.detailLabel}>Wind</p>
-          <p style={styles.detailValue}>
-            {weather.wind_speed} {unit==='metric'?'m/s':'mph'}
-          </p>
+        <div style={styles.detail}>
+          <strong>Wind</strong>
+          <div>{weather.wind.speed} m/s</div>
         </div>
-        <div style={{...styles.detailBox,borderColor:textColor}}>
-          <p style={styles.detailLabel}>Precip.</p>
-          <p style={styles.detailValue}>{p0} mm</p>
+        <div style={styles.detail}>
+          <strong>Precip.</strong>
+          <div>{weather.rain?.['1h'] ?? 0} mm</div>
         </div>
       </div>
     </div>
@@ -150,24 +140,44 @@ export default function WeatherDisplay({ location, unit, onToggleUnit }) {
 }
 
 const styles = {
-  card:       { maxWidth:380, margin:'24px auto', padding:24, borderRadius:16,
-                boxShadow:'0 6px 16px rgba(0,0,0,0.1)', fontFamily:'Helvetica,Arial',
-                backgroundSize:'cover' },
-  header:     { display:'flex',justifyContent:'space-between',alignItems:'flex-start',
-                gap:12, marginBottom:20 },
-  date:       { margin:0,fontSize:'0.95rem',opacity:0.8 },
-  time:       { margin:'4px 0',fontSize:'0.95rem',fontWeight:500 },
-  updated:    { margin:0,fontSize:'0.75rem',opacity:0.7 },
-  toggle:     { border:'2px solid',background:'transparent',padding:'6px 10px',
-                borderRadius:8, cursor:'pointer',fontSize:'0.9rem' },
-  main:       { textAlign:'center',marginBottom:24 },
-  temp:       { margin:0,fontSize:'3rem',lineHeight:1 },
-  condition:  { margin:'8px 0 0',textTransform:'capitalize',fontWeight:500 },
-  detailsRow: { display:'flex',justifyContent:'space-between',marginBottom:12 },
-  detailBox:  { flex:'0 0 48%',padding:12,border:'1px solid',borderRadius:8,
-                textAlign:'center',background:'rgba(255,255,255,0.3)' },
-  detailLabel:{ margin:0,fontSize:'0.85rem',opacity:0.8 },
-  detailValue:{ margin:'4px 0 0',fontSize:'1.15rem',fontWeight:600 },
-  message:    { textAlign:'center',color:'#666',marginTop:20 },
-  error:      { textAlign:'center',color:'red',marginTop:20 }
+  card: {
+    background:   '#FEF9E6',
+    borderRadius: 12,
+    padding:      16,
+    maxWidth:     320,
+    boxShadow:    '0 4px 12px rgba(0,0,0,0.1)',
+    margin:       'auto',
+  },
+  header: {
+    display:        'flex',
+    justifyContent: 'space-between',
+    alignItems:     'flex-start',
+    marginBottom:   12,
+  },
+  dateTime: { fontSize: '0.9rem', color: '#555' },
+  updated:  { fontSize: '0.8rem', color: '#888', marginTop: 4 },
+  toggle: {
+    background:   '#222',
+    color:        '#fff',
+    border:       'none',
+    borderRadius: 4,
+    padding:      '4px 8px',
+    cursor:       'pointer',
+    fontSize:     '0.9rem',
+  },
+  iconWrap:   { textAlign: 'center', marginBottom: 12 },
+  icon:       { width:60, height:60 },
+  mainTemp:   { fontSize:'2.5rem', fontWeight:500, textAlign:'center', marginBottom:4 },
+  condition:  { textTransform:'capitalize', textAlign:'center', color:'#555', marginBottom:16 },
+  detailsRow: { display:'flex', gap:12, marginBottom:8 },
+  detail: {
+    flex:         '1 1 0',
+    background:   '#fff',
+    borderRadius: 8,
+    padding:      8,
+    textAlign:    'center',
+    boxShadow:    '0 2px 6px rgba(0,0,0,0.05)',
+  },
+  error:   { color:'red', textAlign:'center', margin:16 },
+  message: { textAlign:'center', margin:16 },
 };
