@@ -1,75 +1,82 @@
+// src/components/ForecastDisplay.jsx
 import React, { useState, useEffect } from 'react';
-import getHourlyForecast from '../utils/getHourlyForecast.js';
+import getForecast from '../utils/getForecast.js';
 
 export default function ForecastDisplay({ location, unit }) {
-  const [forecast, setForecast] = useState([]);
-  const [error, setError]       = useState('');
+  const [slots, setSlots] = useState([]);
+  const [tzOffset, setTzOffset] = useState(0);
+  const [error, setError] = useState('');
 
   useEffect(() => {
     if (!location) return;
+    setError('');
+    setSlots([]);
+
     (async () => {
       try {
-        const data = await getHourlyForecast(location.lat, location.lon, unit);
-        setForecast(data.hourly.slice(1,7));
+        const data = await getForecast(location.lat, location.lon, unit);
+        const list = Array.isArray(data.list) ? data.list : [];
+        if (!list.length) throw new Error('No forecast data available');
+
+        // save the timezone offset from the payload
+        setTzOffset(data.city?.timezone || 0);
+
+        // take the next six 3-hour slots straight off the list
+        setSlots(list.slice(0, 6));
       } catch (e) {
         setError(e.message);
       }
     })();
   }, [location, unit]);
 
-  if (!location)           return null;
-  if (error)                return <p style={styles.error}>Error: {error}</p>;
-  if (!forecast.length)     return <p style={styles.message}>Loading forecast…</p>;
+  if (!location) return null;
+  if (error) return <p style={{ color: 'red', textAlign: 'center' }}>Error: {error}</p>;
+  if (!slots.length) return <p style={{ textAlign: 'center' }}>Loading forecast…</p>;
 
   return (
-    <div style={styles.container}>
-      {forecast.map((h, i) => {
-        const dt = new Date(h.dt * 1000);
-        const hr = dt.getHours() % 12 || 12;
-        const ap = dt.getHours() >= 12 ? 'PM' : 'AM';
+    <div style={{ display: 'flex', gap: 8, justifyContent: 'space-between', marginTop: 16 }}>
+      {slots.map((h, i) => {
+        // build a JS Date using the payload's tz offset
+        const dt = new Date((h.dt + tzOffset) * 1000);
+        const hour12 = dt.getHours() % 12 || 12;
+        const ampm = dt.getHours() >= 12 ? 'PM' : 'AM';
+        const dateLabel = dt.toLocaleDateString('en-US', { month: 'numeric', day: 'numeric' });
+        const icon = h.weather?.[0]?.icon || '';
+
+        // simple sky-based tint
+        const bg = icon.startsWith('01') ? '#FFEFC4'
+                 : icon.startsWith('02') ? '#E1F5FE'
+                 : icon.startsWith('03') ? '#CFDBDC'
+                 : icon.startsWith('09') || icon.startsWith('10') ? '#B3CFFF'
+                 : icon.startsWith('13') ? '#E1F5FE'
+                 : '#ECEDF1';
+
         return (
-          <div key={i} style={styles.cell}>
-            <p style={styles.time}>{hr}{ap}</p>
-            <img
-              src={`https://openweathermap.org/img/wn/${h.weather[0].icon}@2x.png`}
-              alt={h.weather[0].description}
-              style={styles.icon}
-            />
-            <p style={styles.temp}>{Math.round(h.temp)}°</p>
+          <div
+            key={i}
+            style={{
+              flex: '1 1 auto',
+              padding: 8,
+              borderRadius: 8,
+              background: bg,
+              textAlign: 'center'
+            }}
+          >
+            <p style={{ margin: 0, fontSize: '0.9rem', color: '#555' }}>{dateLabel}</p>
+            <p style={{ margin: '4px 0', fontWeight: 500 }}>{`${hour12}${ampm}`}</p>
+            {icon && (
+              <img
+                src={`https://openweathermap.org/img/wn/${icon}@2x.png`}
+                alt={h.weather[0].description}
+                style={{ width: 40, height: 40 }}
+              />
+            )}
+            <p style={{ margin: 0, fontSize: '1rem', fontWeight: 600 }}>
+              {Math.round(h.main.temp)}°
+            </p>
           </div>
         );
       })}
     </div>
   );
 }
-
-const styles = {
-  container: {
-    display: 'flex',
-    justifyContent: 'space-between',
-    padding: '12px 24px',
-    background: 'rgba(255,255,255,0.8)',
-    borderRadius: 12,
-    marginTop: 16
-  },
-  cell: {
-    textAlign: 'center',
-    flex: '1 1 auto'
-  },
-  time: {
-    margin: 0,
-    fontSize: '0.9rem',
-    color: '#555'
-  },
-  icon: {
-    width: 48,
-    height: 48
-  },
-  temp: {
-    margin: '4px 0 0',
-    fontSize: '1rem',
-    fontWeight: 500
-  },
-  message: { textAlign:'center', color:'#666', marginTop:12 },
-  error:   { textAlign:'center', color:'red', marginTop:12 }
-};

@@ -6,7 +6,7 @@ import ForecastDisplay from './components/ForecastDisplay.jsx';
 
 export default function App() {
   const [location, setLocation] = useState(null);
-  const [unit, setUnit]         = useState('metric');
+  const [unit, setUnit] = useState('metric');
 
   return (
     <div style={{ padding: 16 }}>
@@ -16,10 +16,12 @@ export default function App() {
         unit={unit}
         onToggleUnit={setUnit}
       />
-      <ForecastDisplay
-        location={location}
-        unit={unit}
-      />
+      {location && (
+        <ForecastDisplay
+          location={location}
+          unit={unit}
+        />
+      )}
     </div>
   );
 }
