@@ -1,4 +1,3 @@
-// src/components/WeatherDisplay.jsx
 import React, { useState, useEffect, useCallback } from 'react';
 import getWeather from '../utils/getWeather.js';
 
@@ -11,29 +10,34 @@ const ICON_MAP = {
   thunderstorm: '/assets/icons/thunder.svg',
   mist:         '/assets/icons/fog.svg',
   fog:          '/assets/icons/fog.svg',
-  haze:         '/assets/icons/fog.svg',
+  haze:         '/assets/icons/haze.svg',
 };
 
-export default function WeatherDisplay({ location, unit, onToggleUnit }) {
+export default function WeatherDisplay({
+  location,
+  unit,
+  onToggleUnit,
+  onWeatherChange
+}) {
   const [weather,   setWeather]   = useState(null);
   const [error,     setError]     = useState('');
   const [lastFetch, setLastFetch] = useState(null);
   const [now,       setNow]       = useState(Date.now());
 
-  // fetch logic
   const fetchWeather = useCallback(async () => {
     if (!location) return;
     try {
       const data = await getWeather(location.lat, location.lon, unit);
       setWeather(data);
+      onWeatherChange?.(data);               // 🔥 lift weather up into App.jsx
       setLastFetch(Date.now());
       setError('');
     } catch (e) {
       setError(e.message);
     }
-  }, [location, unit]);
+  }, [location, unit, onWeatherChange]);
 
-  // initial fetch & refetch on location/unit change
+  // initial + refetch when location or unit changes
   useEffect(() => {
     setWeather(null);
     setLastFetch(null);
@@ -47,9 +51,9 @@ export default function WeatherDisplay({ location, unit, onToggleUnit }) {
     return () => clearInterval(id);
   }, [location, fetchWeather]);
 
-  // tick every second for real-time clock
+  // real-time clock tick every second
   useEffect(() => {
-    const id = setInterval(() => setNow(Date.now()), 1_000);
+    const id = setInterval(() => setNow(Date.now()), 1000);
     return () => clearInterval(id);
   }, []);
 
@@ -57,30 +61,23 @@ export default function WeatherDisplay({ location, unit, onToggleUnit }) {
   if (error)     return <div style={styles.error}>Error: {error}</div>;
   if (!weather)  return <div style={styles.message}>Loading weather…</div>;
 
-  // 1) compute remote-local "now"
+  // ——— rendering logic remains unchanged ———
+
   const remoteNowMs = now + weather.timezone * 1000;
   const dt          = new Date(remoteNowMs);
-
-  // 2) format date/time
-  const days   = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
-  const months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
-  const dayStr = days[dt.getUTCDay()];
-  const monStr = months[dt.getUTCMonth()];
-  const date   = dt.getUTCDate();
-  let hh       = dt.getUTCHours();
-  const mm     = dt.getUTCMinutes().toString().padStart(2,'0');
-  const ampm   = hh >= 12 ? 'PM' : 'AM';
-  hh           = hh % 12 || 12;
-  const dateStr = `${dayStr}, ${monStr} ${date}`;
-  const timeStr = `${hh}:${mm} ${ampm}`;
-
-  // 3) minutes since fetch
-  const minsAgo = Math.max(0, Math.round((now - lastFetch) / 60_000));
-  const updatedStr = minsAgo === 0
+  const days        = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
+  const months      = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+  const dateStr     = `${days[dt.getUTCDay()]}, ${months[dt.getUTCMonth()]} ${dt.getUTCDate()}`;
+  let hh            = dt.getUTCHours();
+  const mm          = dt.getUTCMinutes().toString().padStart(2,'0');
+  const ampm        = hh >= 12 ? 'PM' : 'AM';
+  hh                = hh % 12 || 12;
+  const timeStr     = `${hh}:${mm} ${ampm}`;
+  const minsAgo     = Math.max(0, Math.round((now - lastFetch)/60_000));
+  const updatedStr  = minsAgo === 0
     ? 'Updated just now'
     : `Updated ${minsAgo} minute${minsAgo>1?'s':''} ago`;
 
-  // 4) icon + tint
   const key      = weather.weather[0].main.toLowerCase();
   const iconSrc  = ICON_MAP[key] || ICON_MAP.clouds;
   const filter   = key==='clear'
@@ -103,13 +100,13 @@ export default function WeatherDisplay({ location, unit, onToggleUnit }) {
       </header>
 
       <div style={styles.iconWrap}>
-        <img src={iconSrc} alt={weather.weather[0].description}
+        <img src={iconSrc}
+             alt={weather.weather[0].description}
              style={{ ...styles.icon, filter }} />
       </div>
 
       <div style={styles.mainTemp}>
-        {Math.round(weather.main.temp)}°
-        {unit==='metric'?'C':'F'}
+        {Math.round(weather.main.temp)}°{unit==='metric'?'C':'F'}
       </div>
       <div style={styles.condition}>
         {weather.weather[0].description}
@@ -140,44 +137,18 @@ export default function WeatherDisplay({ location, unit, onToggleUnit }) {
 }
 
 const styles = {
-  card: {
-    background:   '#FEF9E6',
-    borderRadius: 12,
-    padding:      16,
-    maxWidth:     320,
-    boxShadow:    '0 4px 12px rgba(0,0,0,0.1)',
-    margin:       'auto',
-  },
-  header: {
-    display:        'flex',
-    justifyContent: 'space-between',
-    alignItems:     'flex-start',
-    marginBottom:   12,
-  },
-  dateTime: { fontSize: '0.9rem', color: '#555' },
-  updated:  { fontSize: '0.8rem', color: '#888', marginTop: 4 },
-  toggle: {
-    background:   '#222',
-    color:        '#fff',
-    border:       'none',
-    borderRadius: 4,
-    padding:      '4px 8px',
-    cursor:       'pointer',
-    fontSize:     '0.9rem',
-  },
-  iconWrap:   { textAlign: 'center', marginBottom: 12 },
-  icon:       { width:60, height:60 },
-  mainTemp:   { fontSize:'2.5rem', fontWeight:500, textAlign:'center', marginBottom:4 },
-  condition:  { textTransform:'capitalize', textAlign:'center', color:'#555', marginBottom:16 },
-  detailsRow: { display:'flex', gap:12, marginBottom:8 },
-  detail: {
-    flex:         '1 1 0',
-    background:   '#fff',
-    borderRadius: 8,
-    padding:      8,
-    textAlign:    'center',
-    boxShadow:    '0 2px 6px rgba(0,0,0,0.05)',
-  },
+  /* — as before — */
+  card: { background:'#FEF9E6', borderRadius:12, padding:16, maxWidth:320, boxShadow:'0 4px 12px rgba(0,0,0,0.1)', margin:'auto' },
+  header: { display:'flex', justifyContent:'space-between', alignItems:'flex-start', marginBottom:12 },
+  dateTime:{ fontSize:'0.9rem', color:'#555' },
+  updated: { fontSize:'0.8rem', color:'#888', marginTop:4 },
+  toggle:  { background:'#222', color:'#fff', border:'none', borderRadius:4, padding:'4px 8px', cursor:'pointer', fontSize:'0.9rem' },
+  iconWrap:{ textAlign:'center', marginBottom:12 },
+  icon:    { width:60, height:60 },
+  mainTemp:{ fontSize:'2.5rem', fontWeight:500, textAlign:'center', marginBottom:4 },
+  condition:{ textTransform:'capitalize', textAlign:'center', color:'#555', marginBottom:16 },
+  detailsRow:{ display:'flex', gap:12, marginBottom:8 },
+  detail:  { flex:'1 1 0', background:'#fff', borderRadius:8, padding:8, textAlign:'center', boxShadow:'0 2px 6px rgba(0,0,0,0.05)' },
   error:   { color:'red', textAlign:'center', margin:16 },
   message: { textAlign:'center', margin:16 },
 };
