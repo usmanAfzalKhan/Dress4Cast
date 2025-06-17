@@ -1,71 +1,63 @@
 // src/components/OutfitSuggestion.jsx
-import React, { useState, useEffect, useRef } from 'react';
-import OpenAI from 'openai';
+import React, { useState, useEffect, useRef } from "react";
 
-export default function OutfitSuggestion({ weather }) {
-  const [suggestion, setSuggestion] = useState('');
-  const [loading, setLoading]       = useState(false);
-  const [error, setError]           = useState('');
-  const askedOnce = useRef(false);
+const fallbackAdvice = (weather) => {
+  const t = Math.round(weather.main.temp);
+  if (t <= 5)   return "Bundle up in a warm coat, scarf, and gloves.";
+  if (t <= 15)  return "Try a light jacket or cardigan with jeans.";
+  if (t <= 25)  return "A T-shirt and light pants should be comfy.";
+  return "Something breezy—shorts and a tank top!";
+};
+
+export default function OutfitSuggestion({ weather, unit }) {
+  const [text,   setText]   = useState("");
+  const [imgUrl, setImgUrl] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [error,   setError]   = useState("");
+  const askedOnceRef = useRef(false);
 
   useEffect(() => {
-    if (!weather || askedOnce.current) return;
-    askedOnce.current = true;
+    if (!weather || askedOnceRef.current) return;
+    askedOnceRef.current = true;
 
-    const key = import.meta.env.VITE_OPENAI_API_KEY;
-    if (!key) {
-      setError('Missing OpenAI API key');
-      return;
-    }
-
-    const openai = new OpenAI({ apiKey: key });
     setLoading(true);
-    setError('');
-    setSuggestion('');
-
-    (async () => {
-      try {
-        const res = await openai.chat.completions.create({
-          model: 'gpt-3.5-turbo',
-          messages: [
-            { role: 'system', content: 'You are a friendly fashion stylist.' },
-            {
-              role: 'user',
-              content: `Current weather: ${Math.round(weather.main.temp)}°${
-                weather.unit === 'metric' ? 'C' : 'F'
-              }, ${weather.weather[0].description}, humidity ${
-                weather.main.humidity
-              }%, wind ${weather.wind.speed} m/s. Suggest a stylish, comfortable outfit.`
-            }
-          ],
-          max_tokens: 120,
-        });
-        setSuggestion(res.choices?.[0]?.message?.content?.trim() ?? '');
-      } catch (e) {
-        if (e.code === '429') setError('Rate limit exceeded. Try again in a minute.');
-        else setError(e.message);
-      } finally {
-        setLoading(false);
-      }
-    })();
-  }, [weather]);
+    fetch("/.netlify/functions/outfit", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ weather, unit }),
+    })
+      .then(async (res) => {
+        const payload = await res.json();
+        if (!res.ok) throw new Error(payload.error || "Function error");
+        return payload;
+      })
+      .then(({ text, imageUrl }) => {
+        setText(text);
+        setImgUrl(imageUrl);
+      })
+      .catch((err) => {
+        console.error(err);
+        setError(err.message);
+        setText(fallbackAdvice(weather));
+      })
+      .finally(() => setLoading(false));
+  }, [weather, unit]);
 
   if (!weather) return null;
-  if (loading)    return <div style={styles.loading}>Generating outfit…</div>;
-  if (error)      return <div style={styles.error}>Error: {error}</div>;
+  if (loading)   return <div style={{ padding: 16 }}>Thinking…</div>;
 
   return (
-    <div style={styles.container}>
-      <strong style={styles.heading}>What to wear:</strong>
-      <p style={styles.text}>{suggestion}</p>
+    <div style={{ margin: 16, padding: 16, background: "#F0F4F8", borderRadius: 8 }}>
+      {error && <div style={{ color: "orange", marginBottom: 8 }}>{error}</div>}
+      <strong>What to wear:</strong>
+      <p>{text}</p>
+      {imgUrl && (
+        <img
+          src={imgUrl}
+          alt="Outfit suggestion"
+          style={{ width: 256, height: 256, borderRadius: 8, marginTop: 12 }}
+        />
+      )}
     </div>
   );
 }
-
-const styles = {
-  container: { marginTop: 16, padding: 16, background: '#E8F4FF', borderRadius: 8 },
-  heading:   { margin: 0, fontSize: '1rem' },
-  text:      { marginTop: 8, fontSize: '0.95rem', lineHeight: 1.4 },
-  loading:   { textAlign: 'center', marginTop: 16 },
-  error:     { color: 'red',    textAlign: 'center', marginTop: 16 },
-};
