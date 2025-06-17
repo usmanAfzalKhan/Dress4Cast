@@ -1,10 +1,20 @@
-// netlify/functions/outfit.js
+// .netlify/functions/outfit.js
 import OpenAI from "openai";
 
-export default async function handler(event, context) {
+export async function handler(event, context) {
   try {
-    // 1) Parse the incoming body
-    const { weather, unit, style } = JSON.parse(event.body || "{}");
+    // 1) Pull in the raw request body
+    let payload;
+    if (typeof event.body === "string") {
+      payload = JSON.parse(event.body);
+    } else {
+      // event.body is a ReadableStream in Netlify Dev
+      const raw = await new Response(event.body).text();
+      payload = raw ? JSON.parse(raw) : {};
+    }
+
+    const { weather, unit, style } = payload;
+
     if (!weather || !unit || !style) {
       return {
         statusCode: 400,
@@ -12,50 +22,35 @@ export default async function handler(event, context) {
       };
     }
 
-    // 2) Pull your secret key from env
-    const apiKey = process.env.OPENAI_KEY;
-    if (!apiKey) {
-      console.error("⚠️  Missing OPENAI_KEY in env!");
-      return {
-        statusCode: 500,
-        body: JSON.stringify({
-          error: "Server misconfiguration: missing OPENAI_KEY",
-        }),
-      };
-    }
+    // 2) Initialize OpenAI with your server‐side key
+    const openai = new OpenAI({ apiKey: process.env.OPENAI_KEY });
+    
+    // Build your prompts however you like…
+    const temp = Math.round(weather.main.temp);
+    const desc = weather.weather[0].description;
+    const styleLower = style.toLowerCase();
 
-    // 3) Initialize the SDK
-    const openai = new OpenAI({ apiKey });
-
-    // 4) Build prompts
-    const temp        = Math.round(weather.main.temp);
-    const weatherDesc = weather.weather[0].description;
-    const tempUnit    = unit === "metric" ? "C" : "F";
-    const styleLower  = style.toLowerCase();
-
-    // 5) Chat completion
+    // 3) Ask for a text suggestion
     const chat = await openai.chat.completions.create({
       model: "gpt-3.5-turbo",
       messages: [
         {
           role: "user",
-          content: `Recommend a *${styleLower}* outfit for ${temp}°${tempUnit} and ${weatherDesc}. Describe what to wear in plain language.`,
-        },
+          content: `Suggest a ${styleLower} outfit for ${temp}°${unit === "metric" ? "C" : "F"} and ${desc}.`
+        }
       ],
-      max_tokens: 100,
-      temperature: 0.8,
     });
-    const text = chat.choices?.[0]?.message?.content?.trim() ?? "";
+    const text = chat.choices[0].message.content;
 
-    // 6) Image generation
-    const imgResp = await openai.images.generate({
-      prompt: `A ${styleLower} outfit for ${weatherDesc} at ${temp}°${tempUnit}, photorealistic, clothing items only.`,
-      n: 1,
-      size: "512x512",
+    // 4) Ask for an image URL
+    const img = await openai.images.generate({
+      model: "dall-e-3",
+      prompt: `A ${styleLower} outfit for someone facing ${temp}°${unit === "metric" ? "C" : "F"} and ${desc}.`,
+      size: "1024x1024",
     });
-    const imageUrl = imgResp.data?.[0]?.url ?? "";
+    const imageUrl = img.data[0].url;
 
-    // 7) Return both
+    // 5) Return it all
     return {
       statusCode: 200,
       body: JSON.stringify({ text, imageUrl }),
