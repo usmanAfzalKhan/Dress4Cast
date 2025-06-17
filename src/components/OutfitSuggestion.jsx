@@ -1,65 +1,44 @@
 // src/components/OutfitSuggestion.jsx
 import React, { useState, useEffect } from "react";
-import OpenAI from "openai";
+
+const STYLE_OPTIONS = [
+  { value: "Stylish", label: "Stylish" },
+  { value: "Casual", label: "Casual" },
+  { value: "Sporty", label: "Sporty" },
+  { value: "Formal", label: "Formal" },
+];
 
 export default function OutfitSuggestion({ weather, unit }) {
+  const [style, setStyle] = useState(STYLE_OPTIONS[0].value);
   const [text, setText] = useState("");
   const [imgUrl, setImgUrl] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+  const [lightboxOpen, setLightboxOpen] = useState(false);
 
   useEffect(() => {
     if (!weather) return;
-
-    const key = import.meta.env.VITE_OPENAI_KEY;
-    if (!key) {
-      setError("Missing OpenAI key in VITE_OPENAI_KEY");
-      return;
-    }
-
     setLoading(true);
     setError("");
     setText("");
     setImgUrl("");
 
-    const openai = new OpenAI({
-      apiKey: key,
-      dangerouslyAllowBrowser: true,
-    });
-
-    (async () => {
-      try {
-        const temp = Math.round(weather.main.temp);
-        const desc = weather.weather[0].description;
-        const prompt = `The weather is ${temp}°${unit === "metric" ? "C" : "F"} and ${desc}. Recommend one stylish outfit in plain language.`;
-
-        // 1) Text
-        const chat = await openai.chat.completions.create({
-          model: "gpt-3.5-turbo",
-          messages: [{ role: "user", content: prompt }],
-          max_tokens: 60,
-          temperature: 0.8,
-        });
-        const suggestion = chat.choices[0]?.message?.content?.trim();
-        if (!suggestion) throw new Error("No text suggestion");
-        setText(suggestion);
-
-        // 2) Image
-        const imagePrompt = `A photorealistic fashion display: ${suggestion}`;
-        const imgResp = await openai.images.generate({
-          prompt: imagePrompt,
-          n: 1,
-          size: "512x512",
-        });
-        setImgUrl(imgResp.data[0].url);
-      } catch (e) {
-        console.error(e);
-        setError(e.message);
-      } finally {
-        setLoading(false);
-      }
-    })();
-  }, [weather, unit]);
+    fetch("/.netlify/functions/outfit", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ weather, unit, style }),
+    })
+      .then((res) => {
+        if (!res.ok) throw new Error(`Server error ${res.status}`);
+        return res.json();
+      })
+      .then(({ text, imageUrl }) => {
+        setText(text);
+        setImgUrl(imageUrl);
+      })
+      .catch((err) => setError(err.message))
+      .finally(() => setLoading(false));
+  }, [weather, unit, style]);
 
   if (!weather) return null;
 
@@ -72,25 +51,75 @@ export default function OutfitSuggestion({ weather, unit }) {
         borderRadius: 8,
       }}
     >
-      {loading && <div>Thinking…</div>}
-      {error && <div style={{ color: "red" }}>{error}</div>}
-      {!loading && !error && (
-        <>
-          <strong>What to wear:</strong>
-          <p>{text}</p>
-          {imgUrl && (
-            <img
-              src={imgUrl}
-              alt="Outfit suggestion"
-              style={{
-                width: 256,
-                height: 256,
-                borderRadius: 8,
-                marginTop: 12,
-              }}
-            />
-          )}
-        </>
+      {/* style picker + error */}
+      <div style={{ marginBottom: 8, display: "flex", alignItems: "center" }}>
+        <label style={{ marginRight: 8, fontWeight: "bold" }}>
+          Pick a style:
+        </label>
+        <select
+          value={style}
+          onChange={(e) => setStyle(e.target.value)}
+        >
+          {STYLE_OPTIONS.map((opt) => (
+            <option key={opt.value} value={opt.value}>
+              {opt.label}
+            </option>
+          ))}
+        </select>
+      </div>
+      {error && (
+        <div style={{ color: "orange", marginBottom: 8 }}>{error}</div>
+      )}
+
+      {/* suggestion text + image */}
+      <strong>What to wear:</strong>
+      <p>{loading ? "Thinking…" : text}</p>
+
+      {imgUrl && !loading && (
+        <div style={{ textAlign: "center", marginTop: 12 }}>
+          <img
+            src={imgUrl}
+            alt="Outfit suggestion"
+            style={{
+              width: 256,
+              height: 256,
+              borderRadius: 8,
+              cursor: "zoom-in",
+            }}
+            onClick={() => setLightboxOpen(true)}
+          />
+        </div>
+      )}
+
+      {/* lightbox/modal */}
+      {lightboxOpen && (
+        <div
+          onClick={() => setLightboxOpen(false)}
+          style={{
+            position: "fixed",
+            top: 0,
+            left: 0,
+            width: "100vw",
+            height: "100vh",
+            background: "rgba(0,0,0,0.8)",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            zIndex: 9999,
+            cursor: "zoom-out",
+          }}
+        >
+          <img
+            src={imgUrl}
+            alt="Outfit suggestion (full size)"
+            onClick={(e) => e.stopPropagation()}
+            style={{
+              maxWidth: "90vw",
+              maxHeight: "90vh",
+              borderRadius: 8,
+            }}
+          />
+        </div>
       )}
     </div>
   );
