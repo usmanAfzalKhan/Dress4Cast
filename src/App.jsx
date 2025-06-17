@@ -100,14 +100,14 @@ export default function App() {
       {/* 4) AI outfit suggestion under the current weather */}
       {weather && <OutfitSuggestion weather={weather} unit={unit} />}
 
-      {/* 5) Forecast list (max 6 slots, 3-hr intervals) */}
-      {forecastData && (
+      {/* 5) Forecast list (max 4 slots, 3-hr intervals) */}
+           {forecastData && (
         <ForecastList
           forecastData={forecastData}
           unit={unit}
-          maxSlots={6}
+          maxSlots={4}   // ← show only 4 slots now
         />
-      )}
+     )}
     </div>
   );
 }
