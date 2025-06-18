@@ -14,6 +14,14 @@ const GENDER_OPTIONS = [
 ];
 
 export default function OutfitSuggestion({ weather, unit }) {
+  // store the initial weather once, then ignore updates (e.g. unit toggles)
+  const [baseWeather, setBaseWeather] = useState(null);
+  useEffect(() => {
+    if (weather && !baseWeather) {
+      setBaseWeather(weather);
+    }
+  }, [weather, baseWeather]);
+
   const [style,   setStyle]   = useState(STYLE_OPTIONS[0].value);
   const [gender,  setGender]  = useState(GENDER_OPTIONS[0].value);
   const [text,    setText]    = useState("");
@@ -21,18 +29,25 @@ export default function OutfitSuggestion({ weather, unit }) {
   const [loading, setLoading] = useState(false);
   const [error,   setError]   = useState("");
 
+  // Only re-run when baseWeather, style, or gender change (unit toggles won't affect)
   useEffect(() => {
-    if (!weather) return;
+    if (!baseWeather) return;
     setLoading(true);
     setError("");
     setText("");
     setImgUrl("");
 
-    fetch("/.netlify/functions/outfit", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ weather, unit, style, gender }),
-    })
+fetch("/.netlify/functions/outfit", {
+  method: "POST",
+  headers: { "Content-Type": "application/json" },
+  body: JSON.stringify({
+    weather: baseWeather,
+    unit,     
+    style,
+    gender,    
+  }),
+})
+
       .then(async (res) => {
         const payload = await res.json().catch(() => ({}));
         if (!res.ok) throw new Error(payload.error || "Server error");
@@ -46,9 +61,9 @@ export default function OutfitSuggestion({ weather, unit }) {
         setError(err.message);
       })
       .finally(() => setLoading(false));
-  }, [weather, unit, style, gender]);
+  }, [baseWeather, style, gender]);
 
-  if (!weather) return null;
+  if (!baseWeather) return null;
 
   return (
     <div style={{ margin: 16, padding: 16, background: "#F0F4F8", borderRadius: 8 }}>
@@ -75,7 +90,6 @@ export default function OutfitSuggestion({ weather, unit }) {
             />
           )}
 
-          {/* Move controls below the suggestion */}
           <div style={{ display: "flex", gap: 12, marginTop: 16, justifyContent: "center" }}>
             <label>
               <strong>Style:</strong>{" "}
