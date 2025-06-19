@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import getWeather from '../utils/getWeather.js';
+import './WeatherDisplay.css'
 
 const ICON_MAP = {
   clear:        '/assets/icons/sun.svg',
@@ -87,7 +88,7 @@ export default function WeatherDisplay({
     : 'invert(70%) sepia(10%) saturate(200%) hue-rotate(180deg)';
 
   return (
-    <div style={styles.card}>
+<div className="weather-card" style={styles.card}>
       <header style={styles.header}>
         <div>
           <div style={styles.dateTime}>{dateStr}</div>
