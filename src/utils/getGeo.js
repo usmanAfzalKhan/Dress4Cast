@@ -6,6 +6,7 @@
  */
 export default async function getGeo(query, limit = 5) {
   const key = import.meta.env.VITE_OPENWEATHER_API_KEY;
+  console.log("🔑 OpenWeather key is:", key);
   const url = `https://api.openweathermap.org/geo/1.0/direct`
             + `?q=${encodeURIComponent(query)}`
             + `&limit=${limit}`
