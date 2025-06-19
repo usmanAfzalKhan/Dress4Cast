@@ -1,42 +1,131 @@
-#root {
-  max-width: 1280px;
-  margin: 0 auto;
-  padding: 2rem;
+/* ──────────────────────────────────────────────────── */
+/*  Global reset & typography                            */
+*, *::before, *::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+body {
+  font-family: sans-serif;
+  background: #eef9fc;
+  color: #2a3f5f;
+}
+
+/* ─── Sticky header placeholder ────────────────────── */
+.app-content {
+  margin-top: 72px;    /* same as header’s height + padding */
+  padding: 1rem;
+  max-width: 800px;
+  margin-left: auto;
+  margin-right: auto;
+}
+
+/* ─── Errors ───────────────────────────────────────── */
+.error {
+  color: #c00;
+  margin: 1rem 0;
+  font-weight: bold;
+}
+
+/* ─── Intro box ─────────────────────────────────────── */
+.intro {
+  max-width: 600px;
+  margin: 2rem auto;
+  padding: 1.5rem;
+  background: #fff;
+  border-radius: 8px;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+  text-align: center;
+}
+.intro h2 {
+  font-size: 1.75rem;
+  margin-bottom: 0.5rem;
+  color: #2a3f5f;
+}
+.intro p {
+  font-size: 1rem;
+  color: #4a5568;
+  line-height: 1.5;
+}
+
+/* ─── Mobile tweaks ────────────────────────────────── */
+@media (max-width: 600px) {
+  .intro {
+    margin: 1rem;
+    padding: 1rem;
+  }
+  .intro h2 {
+    font-size: 1.5rem;
+  }
+  .intro p {
+    font-size: 0.9rem;
+  }
+  .app-content {
+    padding: 0.5rem;
+  }
+}
+
+/* 1) push everything below the fixed header */
+.app-content {
+  margin-top: 72px; /* match your header’s height */
+  padding: 0.5rem 1rem;
+  max-width: 800px;
+  margin-left: auto;
+  margin-right: auto;
+}
+
+/* 2) center the intro panel under the header */
+.intro-wrapper {
+  position: absolute;
+  top: 72px;              /* header height */
+  left: 0;
+  right: 0;
+  bottom: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* 3) your existing intro styling */
+.intro {
+  max-width: 600px;
+  margin: 0 auto;         /* horizontal centering is redundant but harmless */
+  padding: 1.5rem;
+  background: #fff;
+  border-radius: 8px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
   text-align: center;
 }
 
-.logo {
-  height: 6em;
-  padding: 1.5em;
-  will-change: filter;
-  transition: filter 300ms;
-}
-.logo:hover {
-  filter: drop-shadow(0 0 2em #646cffaa);
-}
-.logo.react:hover {
-  filter: drop-shadow(0 0 2em #61dafbaa);
+.intro h2 {
+  font-size: 1.75rem;
+  margin-bottom: 0.5rem;
+  color: #2a3f5f;
 }
 
-@keyframes logo-spin {
-  from {
-    transform: rotate(0deg);
+.intro p {
+  font-size: 1rem;
+  color: #4a5568;
+  line-height: 1.5;
+}
+
+/* mobile tweaks: bump margin-top if header stacks taller */
+@media (max-width: 600px) {
+  .app-content {
+    margin-top: 96px;
+    padding: 0.5rem;
   }
-  to {
-    transform: rotate(360deg);
+  .intro-wrapper {
+    top: 96px;
   }
-}
-
-@media (prefers-reduced-motion: no-preference) {
-  a:nth-of-type(2) .logo {
-    animation: logo-spin infinite 20s linear;
+  .intro {
+    padding: 1rem;
+    margin: 1rem;
   }
-}
-
-.card {
-  padding: 2em;
-}
-
-.read-the-docs {
-  color: #888;
+  .intro h2 {
+    font-size: 1.5rem;
+  }
+  .intro p {
+    font-size: 0.9rem;
+  }
 }
