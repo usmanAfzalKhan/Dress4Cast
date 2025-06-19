@@ -1,3 +1,4 @@
+// src/App.jsx
 import React, { useState, useEffect } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import Header from "./components/Header.jsx";
@@ -5,6 +6,7 @@ import Intro from "./components/Intro.jsx";
 import WeatherDisplay from "./components/WeatherDisplay.jsx";
 import OutfitSuggestion from "./components/OutfitSuggestion.jsx";
 import ForecastList from "./components/ForecastList.jsx";
+import Footer from "./components/Footer.jsx";
 import "./App.css";
 
 export default function App() {
@@ -17,7 +19,6 @@ export default function App() {
   const toggleUnit = () =>
     setUnit((u) => (u === "metric" ? "imperial" : "metric"));
 
-  // build your query param (q= or lat/lon=)
   function buildParam() {
     if (typeof location === "string")
       return `q=${encodeURIComponent(location)}`;
@@ -67,7 +68,6 @@ export default function App() {
 
       <AnimatePresence exitBeforeEnter>
         {!location ? (
-          // <-- new wrapper here
           <motion.div
             className="intro-wrapper"
             key="intro"
@@ -120,6 +120,9 @@ export default function App() {
           </motion.main>
         )}
       </AnimatePresence>
+
+      {/* Footer inserted here */}
+      <Footer />
     </>
   );
 }
