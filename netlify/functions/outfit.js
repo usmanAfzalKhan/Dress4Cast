@@ -1,6 +1,8 @@
 // netlify/functions/outfit.js
 import OpenAI from "openai";
 
+console.log("➡️ OPENAI_KEY =", process.env.OPENAI_KEY);
+
 export async function handler(event, context) {
   // Parse request body
   let payload;
