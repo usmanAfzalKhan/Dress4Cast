@@ -1,6 +1,5 @@
 // src/components/OutfitSuggestion.jsx
 import React, { useState, useEffect } from "react";
-import getOutfit from "../utils/getOutfit.js";
 import "./OutfitSuggestion.css";
 
 const STYLE_OPTIONS = [
@@ -16,40 +15,90 @@ const GENDER_OPTIONS = [
 ];
 
 export default function OutfitSuggestion({ weather, unit }) {
-  const [style, setStyle]   = useState(STYLE_OPTIONS[0].value);
-  const [gender, setGender] = useState(GENDER_OPTIONS[0].value);
-  const [imgSrc, setImgSrc] = useState("");
+  const [style, setStyle]       = useState(STYLE_OPTIONS[0].value);
+  const [gender, setGender]     = useState(GENDER_OPTIONS[0].value);
+  const [text, setText]         = useState("");
+  const [imgUrl, setImgUrl]     = useState("");
+  const [loading, setLoading]   = useState(false);
+  const [error, setError]       = useState("");
+
+  // pull your Vite‐bundled key
+  const OPENAI_KEY = import.meta.env.VITE_OPENAI_KEY;
 
   useEffect(() => {
     if (!weather) return;
 
-    // Convert to Celsius if needed
-    const tempC = unit === "metric"
-      ? weather.main.temp
-      : (weather.main.temp - 32) * (5/9);
+    setLoading(true);
+    setError("");
+    setText("");
+    setImgUrl("");
 
-    // Map your “style” into “modesty” if that util expects it:
-    const modesty = style === "Casual" ? "regular" : "modest";
+    // build prompts
+    const temp   = Math.round(weather.main.temp);
+    const desc   = weather.weather[0].description;
+    const tUnit  = unit === "metric" ? "C" : "F";
+    const styleLower  = style.toLowerCase();
+    const genderLabel = gender === "male" ? "men's" : "women's";
 
-    const { primaryPath, fallbackPath } = getOutfit(
-      gender,
-      modesty,
-      tempC,
-      weather.weather[0].description
-    );
+    const promptText  = `Weather: ${temp}°${tUnit}, ${desc}. Recommend a ${styleLower} ${genderLabel} outfit.`;
+    const promptImage = `A ${styleLower} ${genderLabel} outfit for ${desc}, ${temp}°${tUnit}.`;
 
-    // Try the primary, then fallback on error
-    setImgSrc(primaryPath);
-    const img = new Image();
-    img.onload  = () => setImgSrc(primaryPath);
-    img.onerror = () => setImgSrc(fallbackPath);
-    img.src = primaryPath;
+    (async () => {
+      try {
+        // 1) Chat completion
+        const chatRes = await fetch("https://api.openai.com/v1/chat/completions", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "Authorization": `Bearer ${OPENAI_KEY}`,
+          },
+          body: JSON.stringify({
+            model: "gpt-3.5-turbo",
+            messages: [{ role: "user", content: promptText }],
+            max_tokens: 60,
+            temperature: 0.8,
+          }),
+        });
+        if (!chatRes.ok) throw new Error(`Chat failed: ${await chatRes.text()}`);
+        const chatJson = await chatRes.json();
+        const aiText   = chatJson.choices[0].message.content.trim();
+        setText(aiText);
+
+        // 2) Image generation
+        const imgRes = await fetch("https://api.openai.com/v1/images/generations", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "Authorization": `Bearer ${OPENAI_KEY}`,
+          },
+          body: JSON.stringify({
+            prompt: promptImage,
+            n:      1,
+            size:   "512x512",
+          }),
+        });
+        if (!imgRes.ok) throw new Error(`Image failed: ${await imgRes.text()}`);
+        const imgJson = await imgRes.json();
+        setImgUrl(imgJson.data[0].url);
+      } catch (e) {
+        console.error(e);
+        setError(e.message);
+      } finally {
+        setLoading(false);
+      }
+    })();
   }, [weather, unit, style, gender]);
 
   if (!weather) return null;
+  if (loading)   return <div className="loader">Loading suggestion…</div>;
+  if (error)     return <div className="error">Error: {error}</div>;
 
   return (
     <div className="outfit-box">
+      <p><strong>What to wear:</strong> {text}</p>
+      {imgUrl && (
+        <img src={imgUrl} alt="Outfit suggestion" className="outfit-image" />
+      )}
       <div className="controls">
         <label>
           Style:{" "}
@@ -68,13 +117,6 @@ export default function OutfitSuggestion({ weather, unit }) {
           </select>
         </label>
       </div>
-      {imgSrc && (
-        <img
-          src={imgSrc}
-          alt="Outfit suggestion"
-          className="outfit-image"
-        />
-      )}
     </div>
   );
 }
