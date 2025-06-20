@@ -11,8 +11,8 @@ import "./App.css";
 
 export default function App() {
   const [location, setLocation] = useState(null);
-  const [unit, setUnit] = useState("metric");
-  const [weather, setWeather] = useState(null);
+  const [unit, setUnit] = useState("metric"); // "metric" or "imperial" for display only!
+  const [weather, setWeather] = useState(null); // always stores METRIC data
   const [forecastData, setForecastData] = useState(null);
   const [error, setError] = useState("");
 
@@ -27,6 +27,7 @@ export default function App() {
     return "";
   }
 
+  // Fetch weather ONLY in metric
   useEffect(() => {
     if (!location) return;
     setError("");
@@ -36,7 +37,7 @@ export default function App() {
     const param = buildParam();
 
     fetch(
-      `https://api.openweathermap.org/data/2.5/weather?${param}&units=${unit}&appid=${key}`
+      `https://api.openweathermap.org/data/2.5/weather?${param}&units=metric&appid=${key}`
     )
       .then((r) => {
         if (!r.ok) throw new Error(`Weather API error ${r.status}`);
@@ -44,15 +45,16 @@ export default function App() {
       })
       .then(setWeather)
       .catch((e) => setError(e.message));
-  }, [location, unit]);
+  }, [location]);
 
+  // Fetch forecast ONLY in metric
   useEffect(() => {
     if (!location || !weather) return;
     const key = import.meta.env.VITE_OPENWEATHER_API_KEY;
     const param = buildParam();
 
     fetch(
-      `https://api.openweathermap.org/data/2.5/forecast?${param}&units=${unit}&appid=${key}`
+      `https://api.openweathermap.org/data/2.5/forecast?${param}&units=metric&appid=${key}`
     )
       .then((r) => {
         if (!r.ok) throw new Error(`Forecast API error ${r.status}`);
@@ -60,7 +62,7 @@ export default function App() {
       })
       .then(setForecastData)
       .catch((e) => setError(e.message));
-  }, [location, weather, unit]);
+  }, [location, weather]);
 
   return (
     <>
@@ -102,7 +104,7 @@ export default function App() {
                     location={location}
                     unit={unit}
                     onToggleUnit={toggleUnit}
-                    onWeatherChange={setWeather}
+                    weather={weather} // pass the always-metric weather
                   />
                 </motion.div>
               )}
