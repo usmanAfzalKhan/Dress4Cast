@@ -1,9 +1,10 @@
+// src/components/ForecastDisplay.jsx
 import React, { useState, useEffect } from 'react';
 import getForecast from '../utils/getForecast.js';
 
 export default function ForecastDisplay({ location, unit }) {
-  const [slots, setSlots]   = useState([]);
-  const [error, setError]   = useState('');
+  const [slots, setSlots] = useState([]);
+  const [error, setError] = useState('');
 
   useEffect(() => {
     if (!location) {
@@ -30,41 +31,48 @@ export default function ForecastDisplay({ location, unit }) {
   }, [location, unit]);
 
   if (!location) return null;
-  if (error)     return <div style={{ color: 'red', textAlign: 'center' }}>Error: {error}</div>;
-  if (!slots.length) return <div style={{ textAlign: 'center' }}>Loading forecast…</div>;
+  if (error)
+    return (
+      <div className="forecast-error">
+        Error: {error}
+      </div>
+    );
+  if (!slots.length)
+    return (
+      <div className="forecast-loading">
+        Loading forecast…
+      </div>
+    );
 
   return (
-    <div style={{ display: 'flex', gap: 8, justifyContent: 'space-between', marginTop: 16 }}>
+    <div className="forecast-container">
       {slots.map((h, i) => {
         const dt = new Date(h.dt * 1000);
         const hour12 = dt.getHours() % 12 || 12;
-        const ampm   = dt.getHours() >= 12 ? 'PM' : 'AM';
-        const date   = dt.toLocaleDateString('en-US', { month: 'numeric', day: 'numeric' });
-        const icon   = h.weather?.[0]?.icon;
+        const ampm = dt.getHours() >= 12 ? 'PM' : 'AM';
+        const date = dt.toLocaleDateString('en-US', { month: 'numeric', day: 'numeric' });
+        const icon = h.weather?.[0]?.icon;
 
         return (
           <div
             key={i}
+            className="forecast-card"
             style={{
-              flex: '1 1 auto',
-              padding: 8,
-              borderRadius: 8,
-              background: '#ECEDF1',
-              textAlign: 'center',
+              background: '#22375e',
+              borderRadius: 18,
+              boxShadow: '0 4px 18px #0002, 0 1.5px 6px 0 #0e172033',
+              color: '#e8ecf8'
             }}
           >
-            <p style={{ margin: 0, fontSize: '0.9rem', color: '#555' }}>{date}</p>
-            <p style={{ margin: '4px 0', fontWeight: 500 }}>{`${hour12}${ampm}`}</p>
+            <p className="date">{date}</p>
+            <p className="hour">{`${hour12}${ampm}`}</p>
             {icon && (
               <img
                 src={`https://openweathermap.org/img/wn/${icon}@2x.png`}
                 alt=""
-                style={{ width: 40, height: 40 }}
               />
             )}
-            <p style={{ margin: 0, fontSize: '1rem', fontWeight: 600 }}>
-              {Math.round(h.main.temp)}°
-            </p>
+            <p className="temp">{Math.round(h.main.temp)}°</p>
           </div>
         );
       })}

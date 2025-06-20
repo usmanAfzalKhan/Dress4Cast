@@ -1,16 +1,6 @@
 // src/components/ForecastCard.jsx
 import React, { useState } from "react";
 
-// pick a background color based on description keywords
-function getBgColor(desc) {
-  const d = desc.toLowerCase();
-  if (d.includes("rain"))   return "#d2e0ea";
-  if (d.includes("snow"))   return "#e8f0fa";
-  if (d.includes("cloud"))  return "#f0f0f0";
-  if (d.includes("clear") || d.includes("sun")) return "#fff7e6";
-  return "#f8f8f8";
-}
-
 // generate a short, dynamic suggestion
 function generateSuggestion(temp, desc, unit) {
   const tUnit = unit === "metric" ? "°C" : "°F";
@@ -51,24 +41,29 @@ export default function ForecastCard({ item, unit }) {
   const [shown, setShown] = useState(false);
 
   const suggestion = generateSuggestion(temp, desc, unit);
-  const bg = getBgColor(desc);
 
   return (
     <div
       style={{
-        background: bg,
-        color: "#2d3436",
-        borderRadius: 8,
-        padding: 12,
+        background: "#22375e",
+        color: "#e8ecf8",
+        borderRadius: 18,
+        padding: 14,
         textAlign: "center",
+        minWidth: 130,
+        boxShadow: "0 4px 18px #0002, 0 1.5px 6px 0 #0e172033",
+        margin: "0 auto",
+        display: "flex",
+        flexDirection: "column",
+        alignItems: "center"
       }}
     >
-      <div style={{ fontSize: 12, color: "#666" }}>{date}</div>
-      <div style={{ fontWeight: "bold", margin: "4px 0" }}>{time}</div>
-      <div style={{ marginBottom: 8 }}>
+      <div style={{ fontSize: 12, color: "#cce4fa" }}>{date}</div>
+      <div style={{ fontWeight: "bold", margin: "4px 0", color: "#ffea8a" }}>{time}</div>
+      <div style={{ marginBottom: 8, fontWeight: 600, fontSize: "1.08em" }}>
         {temp}°{unit === "metric" ? "C" : "F"}
         <br />
-        <small>{desc}</small>
+        <small style={{ fontWeight: 400, color: "#e8ecf8" }}>{desc}</small>
       </div>
 
       {!shown ? (
@@ -77,16 +72,21 @@ export default function ForecastCard({ item, unit }) {
           style={{
             padding: "6px 12px",
             border: "none",
-            borderRadius: 4,
-            background: "#2d3436",
+            borderRadius: 6,
+            background: "#406bda",
             color: "#fff",
             cursor: "pointer",
+            fontWeight: 600,
+            fontSize: "1em",
+            marginTop: 4,
+            boxShadow: "0 1.5px 8px 0 #193e9733",
+            transition: "background 0.15s"
           }}
         >
           View suggestion
         </button>
       ) : (
-        <div style={{ marginTop: 8, fontStyle: "italic" }}>
+        <div style={{ marginTop: 8, fontStyle: "italic", color: "#e8eaf6", fontSize: "0.98em" }}>
           {suggestion}
         </div>
       )}

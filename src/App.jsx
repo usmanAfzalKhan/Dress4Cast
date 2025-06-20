@@ -121,7 +121,6 @@ export default function App() {
         )}
       </AnimatePresence>
 
-      {/* Footer inserted here */}
       <Footer />
     </>
   );

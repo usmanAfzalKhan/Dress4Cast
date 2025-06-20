@@ -1,135 +1,479 @@
-/* ──────────────────────────────────────────────────── */
-/*  Global reset & typography                            */
-*, *::before, *::after {
-  box-sizing: border-box;
+:root {
+  --main-bg: #142850;                /* Royal Pearl Blue */
+  --header-bg: #163161cc;
+  --footer-bg: #163161cc;
+  --accent: #406bda;
+  --card-bg: #22375e;
+  --highlight-bg: #27496d;
+  --white: #fff;
+  --input-bg: #224070;
+  --shadow: 0 4px 28px 0 rgba(0,0,0,0.16), 0 2px 10px 0 rgba(20,40,80,0.13);
+  --radius: 18px;
+  --gap: 1.35rem;
+  --max-content-width: 520px;
+}
+
+html, body, #root {
+  min-height: 100vh;
   margin: 0;
   padding: 0;
+  background: var(--main-bg);
+  font-family: 'Inter', 'Segoe UI', Arial, sans-serif;
+  color: var(--white);
+  width: 100vw;
+  box-sizing: border-box;
 }
+
 body {
-  font-family: sans-serif;
-  background: #eef9fc;
-  color: #2a3f5f;
+  min-height: 100dvh;
+  box-sizing: border-box;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  background: var(--main-bg); /* always royal blue */
+  width: 100vw;
+  overflow-x: hidden;
 }
 
-/* ─── Sticky header placeholder ────────────────────── */
-.app-content {
-  margin-top: 72px;    /* same as header’s height + padding */
-  padding: 1rem;
-  max-width: 800px;
-  margin-left: auto;
-  margin-right: auto;
+#root {
+  width: 100vw;
+  min-height: 100vh;
+  background: var(--main-bg);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
 }
 
-/* ─── Errors ───────────────────────────────────────── */
-.error {
-  color: #c00;
-  margin: 1rem 0;
-  font-weight: bold;
-}
-
-/* ─── Intro box ─────────────────────────────────────── */
-.intro {
-  max-width: 600px;
-  margin: 2rem auto;
-  padding: 1.5rem;
-  background: #fff;
-  border-radius: 8px;
-  box-shadow: 0 4px 12px rgba(0,0,0,0.1);
-  text-align: center;
-}
-.intro h2 {
-  font-size: 1.75rem;
-  margin-bottom: 0.5rem;
-  color: #2a3f5f;
-}
-.intro p {
-  font-size: 1rem;
-  color: #4a5568;
-  line-height: 1.5;
-}
-
-/* ─── Mobile tweaks ────────────────────────────────── */
-@media (max-width: 600px) {
-  .intro {
-    margin: 1rem;
-    padding: 1rem;
-  }
-  .intro h2 {
-    font-size: 1.5rem;
-  }
-  .intro p {
-    font-size: 0.9rem;
-  }
-  .app-content {
-    padding: 0.5rem;
-  }
-}
-
-/* 1) push everything below the fixed header */
-.app-content {
-  margin-top: 72px; /* match your header’s height */
-  padding: 0.5rem 1rem;
-  max-width: 800px;
-  margin-left: auto;
-  margin-right: auto;
-}
-
-/* 2) center the intro panel under the header */
-.intro-wrapper {
-  position: absolute;
-  top: 72px;              /* header height */
-  left: 0;
-  right: 0;
-  bottom: 0;
+/* Header */
+.app-header {
+  position: fixed;
+  top: 0; left: 0; right: 0;
+  z-index: 40;
+  width: 100vw;
+  background: var(--header-bg);
+  backdrop-filter: blur(8px);
   display: flex;
   align-items: center;
-  justify-content: center;
+  justify-content: space-between;
+  min-height: 68px;
+  padding: 0 20px;
+  box-shadow: 0 3px 20px rgba(20, 40, 80, 0.14);
+  border-bottom: 1.5px solid #1e3555;
 }
 
-/* 3) your existing intro styling */
-.intro {
-  max-width: 600px;
-  margin: 0 auto;         /* horizontal centering is redundant but harmless */
-  padding: 1.5rem;
-  background: #fff;
+.logo-link {
+  display: flex;
+  align-items: center;
+  height: 64px;
+  transition: transform 0.2s cubic-bezier(.4,0,.2,1);
+}
+.header-logo {
+  height: 56px;
+  width: auto;
+  transition: transform 0.2s cubic-bezier(.4,0,.2,1);
+}
+.logo-link:hover .header-logo {
+  transform: scale(1.16);
+  box-shadow: 0 0 20px 0 #406bda55;
+}
+
+.search-bar {
+  flex: 1;
+  max-width: 370px;
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+  position: relative;
+}
+.search-bar input {
+  width: 100%;
+  padding: 12px 14px;
+  border-radius: 999px;
+  border: none;
+  font-size: 1.08rem;
+  background: var(--input-bg);
+  color: var(--white);
+  transition: box-shadow 0.22s cubic-bezier(.4,0,.2,1), background 0.18s;
+  box-shadow: var(--shadow);
+  outline: none;
+  margin-left: 18px;
+  border: 1.5px solid #37598b;
+  font-weight: 500;
+}
+.search-bar input:focus {
+  box-shadow: 0 0 0 2.5px #eaeaea33;
+  background: #1a3766;
+  border-color: #fff;
+}
+.suggestions {
+  position: absolute;
+  top: 105%;
+  right: 0;
+  width: 100%;
+  background: var(--highlight-bg);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+  max-height: 180px;
+  overflow-y: auto;
+  z-index: 100;
+  margin-top: 4px;
+  padding: 4px 0;
+  list-style: none;
+}
+.suggestions li {
+  padding: 10px 18px;
+  cursor: pointer;
+  font-size: 1.01rem;
+  color: var(--white);
   border-radius: 8px;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  transition: background 0.16s;
+}
+.suggestions li.highlighted,
+.suggestions li:hover {
+  background: #406bda88;
+  color: #fff;
+}
+
+/* Main layout */
+main.app-content {
+  width: 100vw;
+  min-height: 72vh;
+  margin-top: 104px;
+  margin-bottom: 92px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--gap);
+  background: var(--main-bg);
+  box-sizing: border-box;
+  padding-bottom: 84px;
+}
+
+/* Intro/Welcome Card */
+.intro-wrapper, .intro {
+  width: 100%;
+  max-width: 520px;
+  background: var(--card-bg);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+  padding: 2.1rem 1.7rem 2.1rem 1.7rem;
+  margin: 36px 0 0 0;
   text-align: center;
 }
 
-.intro h2 {
-  font-size: 1.75rem;
-  margin-bottom: 0.5rem;
-  color: #2a3f5f;
+/* WeatherDisplay styling: DARK CARD, white text */
+.weather-card {
+  width: 100%;
+  max-width: 355px;
+  margin: 0 auto 0.8rem auto;
+  background: var(--card-bg);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+  padding: 1.45rem 1.15rem 1.1rem 1.15rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  color: var(--white);
+  z-index: 2;
+}
+.weather-card header,
+.weather-card .dateTime,
+.weather-card .updated,
+.weather-card .condition {
+  color: #cce4fa;
+}
+.weather-card .mainTemp {
+  color: #fff;
+  font-size: 2.2rem;
+  font-weight: 700;
+  text-align: center;
+}
+.weather-card button {
+  background: var(--accent);
+  color: #fff;
+  border: none;
+  border-radius: 8px;
+  padding: 4.5px 12px;
+  cursor: pointer;
+  font-size: 1.05rem;
+  font-weight: 600;
+  transition: background 0.13s;
+}
+.weather-card button:hover {
+  background: #5172cf;
+}
+.weather-card .detailsRow {
+  color: #f1f3f8;
+}
+.weather-card .detail {
+  background: #18315a;
+  border-radius: 10px;
+  color: #cde0f6;
+  box-shadow: 0 1.5px 5px #0002;
 }
 
-.intro p {
-  font-size: 1rem;
-  color: #4a5568;
-  line-height: 1.5;
+/* Outfit suggestion styling: smaller, modern, tight */
+.outfit-box {
+  width: 100%;
+  max-width: 320px;
+  margin: 0 auto 1rem auto;
+  background: #18315a;
+  border-radius: 19px;
+  box-shadow: 0 4px 18px #0002, 0 1.5px 6px 0 #0e172033;
+  padding: 1.05rem 1.05rem 0.7rem 1.05rem;
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  transition: box-shadow 0.18s cubic-bezier(.4,0,.2,1);
+  border: 1.5px solid #406bda36;
+  z-index: 2;
+}
+.outfit-box .expand-toggle {
+  align-self: flex-end;
+  margin-bottom: 0.8rem;
+  border: none;
+  background: var(--accent);
+  color: #fff;
+  font-weight: 600;
+  padding: 7.5px 17px;
+  border-radius: 8px;
+  font-size: 1.08em;
+  letter-spacing: 0.01em;
+  cursor: pointer;
+  transition: background 0.15s, box-shadow 0.17s;
+  box-shadow: 0 1.5px 8px 0 #193e9733;
+}
+.outfit-box .expand-toggle:hover {
+  background: #5172cf;
 }
 
-/* mobile tweaks: bump margin-top if header stacks taller */
-@media (max-width: 600px) {
-  .app-content {
-    margin-top: 96px;
-    padding: 0.5rem;
+.outfit-content {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.7rem;
+}
+.outfit-text {
+  width: 100%;
+  font-size: 0.98rem;
+  text-align: left;
+  color: #e8eaf6;
+  margin-bottom: 5px;
+}
+.outfit-image {
+  width: 110px;
+  height: 110px;
+  object-fit: contain;
+  border-radius: 12px;
+  box-shadow: 0 1.5px 10px #0001;
+  margin-bottom: 4px;
+  align-self: center;
+}
+
+.controls {
+  width: 100%;
+  display: flex;
+  gap: 0.8rem;
+  justify-content: flex-end;
+  align-items: center;
+  margin-top: 2px;
+  margin-bottom: 3px;
+}
+.controls label {
+  font-size: 0.95rem;
+  color: #c2d8f6;
+}
+.controls select {
+  margin-left: 7px;
+  padding: 2.5px 8px;
+  border-radius: 6px;
+  border: 1px solid #b7cdf1;
+  background: #22375e;
+  color: #fff;
+}
+
+/* Loader and error */
+.loader {
+  text-align: center;
+  padding: 0.4rem 0 0.1rem 0;
+  color: #e0e5ed;
+  font-size: 1.07em;
+}
+.error {
+  color: #ff6767;
+  margin: 0.22em 0 0.1em 0;
+  font-size: 1em;
+  text-align: center;
+}
+
+/* Forecast cards/columns */
+.forecast-container {
+  width: 100%;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(144px, 1fr));
+  gap: 16px;
+  margin: 0.65rem 0 0.6rem 0;
+  justify-content: center;
+}
+.forecast-card {
+  background: #22375e;
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+  text-align: center;
+  padding: 1.0rem 0.7rem;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.4rem;
+  color: #e8ecf8;
+  border: 1.5px solid #406bda28;
+}
+.forecast-card .date {
+  font-size: 0.92em;
+  color: #e7ecf9b3;
+}
+.forecast-card .hour {
+  font-size: 1.06em;
+  font-weight: 500;
+  color: #ffea8a;
+}
+.forecast-card .temp {
+  font-size: 1.38em;
+  font-weight: 600;
+  margin-bottom: 0.16em;
+}
+.forecast-card button {
+  margin-top: 7px;
+  padding: 5.5px 14px;
+  border-radius: 7px;
+  background: #27496d;
+  color: #fff;
+  border: none;
+  font-size: 1em;
+  cursor: pointer;
+  transition: background 0.13s;
+}
+.forecast-card button:hover {
+  background: #3d72d3;
+}
+
+/* Footer */
+.app-footer {
+  position: fixed;
+  bottom: 0; left: 0; right: 0;
+  width: 100vw;
+  background: var(--footer-bg);
+  color: #fafbfe;
+  text-align: center;
+  font-size: 1.07em;
+  padding: 15px 0 13px 0;
+  z-index: 99;
+  border-top: 1.5px solid #1e3555;
+  letter-spacing: 0.01em;
+  box-shadow: 0 -1px 12px 0 #1b3b6f15;
+}
+
+/* Responsive tweaks & mobile fixes */
+@media (max-width: 800px) {
+  .app-header {
+    min-height: 53px;
+    padding: 0 4vw;
   }
+  .header-logo {
+    height: 40px;
+  }
+  .search-bar {
+    max-width: 180px;
+    margin-left: 0;
+  }
+  main.app-content {
+    padding: 1.2rem 2vw 1.2rem 2vw;
+    margin-top: 64px;
+    margin-bottom: 76px;
+    max-width: 100vw;
+    width: 100vw;
+    gap: 0.9rem;
+    min-height: calc(100vh - 140px);
+    box-sizing: border-box;
+    background: var(--main-bg);
+    overflow-x: hidden !important;
+  }
+  .weather-card,
+  .outfit-box,
   .intro-wrapper {
-    top: 96px;
+    margin-bottom: 1.2rem !important;
+    margin-top: 0.2rem !important;
+    width: 100% !important;
+    max-width: 98vw !important;
+    min-width: 0 !important;
+    z-index: 2;
   }
-  .intro {
-    padding: 1rem;
-    margin: 1rem;
+  .outfit-box {
+    margin-top: 0.3rem !important;
   }
-  .intro h2 {
-    font-size: 1.5rem;
+  .forecast-container {
+    grid-template-columns: 1fr !important;
+    gap: 0.95rem !important;
+    width: 100% !important;
+    margin-bottom: 1.2rem !important;
+    overflow-x: visible !important;
+    background: transparent !important;
+    padding: 0;
   }
-  .intro p {
-    font-size: 0.9rem;
+  .forecast-card {
+    width: 99vw !important;
+    max-width: 97vw !important;
+    min-width: 0 !important;
+    margin-left: auto !important;
+    margin-right: auto !important;
+    box-sizing: border-box;
+    z-index: 2;
+  }
+  .app-footer {
+    position: fixed !important;
+    bottom: 0; left: 0; right: 0;
+    width: 100vw !important;
+    z-index: 99;
+    background: #163161cc !important;
+    box-shadow: 0 -1px 16px #1b3b6f25;
+    border-top: 1.5px solid #1e3555;
+  }
+  body, #root {
+    padding-bottom: 98px !important;
+    background: #142850 !important;
+    min-height: 100vh;
+    overflow-x: hidden !important;
   }
 }
-/* make room for the fixed footer so page content never gets hidden */
-.app-content {
-  padding-bottom: 40px; /* should be at least the footer's height + some breathing room */
+
+/* Never let content go behind header or footer */
+main.app-content {
+  padding-top: 84px !important;
+  padding-bottom: 84px !important;
+}
+body, #root {
+  background: #142850 !important;
+  min-height: 100vh;
+  width: 100vw;
+  overflow-x: hidden;
+}
+
+/* Placeholder color in dark input */
+::-webkit-input-placeholder { color: #bacce5; }
+::-moz-placeholder { color: #bacce5; }
+:-ms-input-placeholder { color: #bacce5; }
+::placeholder { color: #bacce5; }
+
+/* Scrollbar for dark bg */
+::-webkit-scrollbar {
+  width: 10px;
+  background: #18315a;
+  border-radius: 7px;
+}
+::-webkit-scrollbar-thumb {
+  background: #2a406f;
+  border-radius: 7px;
 }

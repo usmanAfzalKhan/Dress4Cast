@@ -1,6 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import getWeather from '../utils/getWeather.js';
-import './WeatherDisplay.css'
 
 const ICON_MAP = {
   clear:        '/assets/icons/sun.svg',
@@ -30,7 +29,7 @@ export default function WeatherDisplay({
     try {
       const data = await getWeather(location.lat, location.lon, unit);
       setWeather(data);
-      onWeatherChange?.(data);               // 🔥 lift weather up into App.jsx
+      onWeatherChange?.(data);
       setLastFetch(Date.now());
       setError('');
     } catch (e) {
@@ -38,21 +37,18 @@ export default function WeatherDisplay({
     }
   }, [location, unit, onWeatherChange]);
 
-  // initial + refetch when location or unit changes
   useEffect(() => {
     setWeather(null);
     setLastFetch(null);
     fetchWeather();
   }, [fetchWeather]);
 
-  // auto-refresh every 5 minutes
   useEffect(() => {
     if (!location) return;
     const id = setInterval(fetchWeather, 300_000);
     return () => clearInterval(id);
   }, [location, fetchWeather]);
 
-  // real-time clock tick every second
   useEffect(() => {
     const id = setInterval(() => setNow(Date.now()), 1000);
     return () => clearInterval(id);
@@ -61,8 +57,6 @@ export default function WeatherDisplay({
   if (!location) return null;
   if (error)     return <div style={styles.error}>Error: {error}</div>;
   if (!weather)  return <div style={styles.message}>Loading weather…</div>;
-
-  // ——— rendering logic remains unchanged ———
 
   const remoteNowMs = now + weather.timezone * 1000;
   const dt          = new Date(remoteNowMs);
@@ -81,14 +75,15 @@ export default function WeatherDisplay({
 
   const key      = weather.weather[0].main.toLowerCase();
   const iconSrc  = ICON_MAP[key] || ICON_MAP.clouds;
-  const filter   = key==='clear'
-    ? (dt.getUTCHours()>=6 && dt.getUTCHours()<18
-       ? 'invert(60%) sepia(80%) saturate(500%) hue-rotate(5deg)'
-       : 'invert(20%) sepia(10%) saturate(200%) hue-rotate(180deg)')
-    : 'invert(70%) sepia(10%) saturate(200%) hue-rotate(180deg)';
+  // ---- This is the only changed part for filter ----
+  const filter =
+    key === 'clear'
+      ? 'invert(93%) sepia(7%) saturate(1200%) hue-rotate(190deg) brightness(1.15)'
+      : 'invert(95%) sepia(7%) saturate(900%) hue-rotate(185deg) brightness(1.12)';
+  // --------------------------------------------------
 
   return (
-<div className="weather-card" style={styles.card}>
+    <div className="weather-card" style={styles.card}>
       <header style={styles.header}>
         <div>
           <div style={styles.dateTime}>{dateStr}</div>
@@ -138,18 +133,25 @@ export default function WeatherDisplay({
 }
 
 const styles = {
-  /* — as before — */
-  card: { background:'#FEF9E6', borderRadius:12, padding:16, maxWidth:320, boxShadow:'0 4px 12px rgba(0,0,0,0.1)', margin:'auto' },
+  card: {
+    background: '#22375e',          // dark royal blue card
+    borderRadius: 18,
+    padding: 20,
+    maxWidth: 355,
+    boxShadow: '0 4px 18px #0002, 0 1.5px 6px 0 #0e172033',
+    margin: 'auto',
+    color: '#fff',                  // all text is white
+  },
   header: { display:'flex', justifyContent:'space-between', alignItems:'flex-start', marginBottom:12 },
-  dateTime:{ fontSize:'0.9rem', color:'#555' },
-  updated: { fontSize:'0.8rem', color:'#888', marginTop:4 },
-  toggle:  { background:'#222', color:'#fff', border:'none', borderRadius:4, padding:'4px 8px', cursor:'pointer', fontSize:'0.9rem' },
+  dateTime:{ fontSize:'0.98rem', color:'#cce4fa' },
+  updated: { fontSize:'0.86rem', color:'#aacbe5', marginTop:4 },
+  toggle:  { background:'#406bda', color:'#fff', border:'none', borderRadius:7, padding:'5px 12px', cursor:'pointer', fontSize:'1rem', fontWeight:600 },
   iconWrap:{ textAlign:'center', marginBottom:12 },
   icon:    { width:60, height:60 },
-  mainTemp:{ fontSize:'2.5rem', fontWeight:500, textAlign:'center', marginBottom:4 },
-  condition:{ textTransform:'capitalize', textAlign:'center', color:'#555', marginBottom:16 },
+  mainTemp:{ fontSize:'2.5rem', fontWeight:600, textAlign:'center', marginBottom:4, color:'#fff' },
+  condition:{ textTransform:'capitalize', textAlign:'center', color:'#ffea8a', marginBottom:16, fontSize: '1.13rem', fontWeight: 500 },
   detailsRow:{ display:'flex', gap:12, marginBottom:8 },
-  detail:  { flex:'1 1 0', background:'#fff', borderRadius:8, padding:8, textAlign:'center', boxShadow:'0 2px 6px rgba(0,0,0,0.05)' },
+  detail:  { flex:'1 1 0', background:'#18315a', borderRadius:10, padding:8, textAlign:'center', boxShadow:'0 1.5px 5px #0002', color:'#cde0f6' },
   error:   { color:'red', textAlign:'center', margin:16 },
   message: { textAlign:'center', margin:16 },
 };
