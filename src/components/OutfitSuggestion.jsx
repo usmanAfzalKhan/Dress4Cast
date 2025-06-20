@@ -15,9 +15,7 @@ const GENDER_OPTIONS = [
 ];
 
 export default function OutfitSuggestion({ weather, unit }) {
-  // cache results per combo to avoid refetch on toggle
   const cacheRef = useRef({});
-
   const [baseWeather, setBaseWeather] = useState(null);
   useEffect(() => {
     if (weather && !baseWeather) {
@@ -34,7 +32,6 @@ export default function OutfitSuggestion({ weather, unit }) {
 
   useEffect(() => {
     if (!baseWeather) return;
-
     const key = `${baseWeather.main.temp}-${style}-${gender}`;
     if (cacheRef.current[key]) {
       const { text: cachedText, imageUrl: cachedUrl } = cacheRef.current[key];
@@ -54,18 +51,29 @@ export default function OutfitSuggestion({ weather, unit }) {
       body: JSON.stringify({ weather: baseWeather, unit, style, gender }),
     })
       .then(async (res) => {
-        if (!res.ok) {
-          const err = await res.json().catch(() => ({}));
-          throw new Error(err.error || `Server error ${res.status}`);
+        console.log("Outfit function response status:", res.status);
+        let json;
+        try {
+          json = await res.json();
+        } catch (e) {
+          console.error("Failed to parse JSON:", e);
+          throw new Error("Invalid JSON response from outfit function");
         }
-        return res.json();
+        console.log("Outfit function response JSON:", json);
+        if (!res.ok) {
+          throw new Error(json.error || `Server error ${res.status}`);
+        }
+        return json;
       })
       .then(({ text: aiText, imageUrl }) => {
         setText(aiText);
         setImgUrl(imageUrl);
         cacheRef.current[key] = { text: aiText, imageUrl };
       })
-      .catch((err) => setError(err.message))
+      .catch((err) => {
+        console.error("Outfit suggestion error:", err);
+        setError(err.message);
+      })
       .finally(() => setLoading(false));
   }, [baseWeather, style, gender, unit]);
 
@@ -78,41 +86,47 @@ export default function OutfitSuggestion({ weather, unit }) {
           Loading suggestion<span className="dots" />
         </div>
       ) : error ? (
-        <div className="error">{error}</div>
-      ) : (
-        text && (
-          <>
-            <strong>What to wear:</strong>
-            <p>{text}</p>
-            {imgUrl && (
-              <img
-                src={imgUrl}
-                alt="Outfit suggestion"
-                className="outfit-image"
-              />
-            )}
+        <div className="error">Error: {error}</div>
+      ) : text ? (
+        <>
+          <strong>What to wear:</strong>
+          <p>{text}</p>
+          {imgUrl && (
+            <img
+              src={imgUrl}
+              alt="Outfit suggestion"
+              className="outfit-image"
+              onError={(e) => {
+                console.error("Image load failed:", e);
+                setError("Failed to load outfit image");
+              }}
+            />
+          )}
 
-            <div className="controls">
-              <label>
-                <strong>Style:</strong>{" "}
-                <select value={style} onChange={(e) => setStyle(e.target.value)}>
-                  {STYLE_OPTIONS.map((o) => (
-                    <option key={o.value} value={o.value}>{o.label}</option>
-                  ))}
-                </select>
-              </label>
-              <label>
-                <strong>Gender:</strong>{" "}
-                <select value={gender} onChange={(e) => setGender(e.target.value)}>
-                  {GENDER_OPTIONS.map((o) => (
-                    <option key={o.value} value={o.value}>{o.label}</option>
-                  ))}
-                </select>
-              </label>
-            </div>
-          </>
-        )
-      )}
+          <div className="controls">
+            <label>
+              <strong>Style:</strong>{" "}
+              <select value={style} onChange={(e) => setStyle(e.target.value)}>
+                {STYLE_OPTIONS.map((o) => (
+                  <option key={o.value} value={o.value}>
+                    {o.label}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <label>
+              <strong>Gender:</strong>{" "}
+              <select value={gender} onChange={(e) => setGender(e.target.value)}>
+                {GENDER_OPTIONS.map((o) => (
+                  <option key={o.value} value={o.value}>
+                    {o.label}
+                  </option>
+                ))}
+              </select>
+            </label>
+          </div>
+        </>
+      ) : null}
     </div>
   );
 }
