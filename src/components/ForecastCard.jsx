@@ -1,4 +1,3 @@
-// src/components/ForecastCard.jsx
 import React, { useState } from "react";
 
 // Local C to F converter
@@ -6,7 +5,6 @@ function cToF(c) {
   return Math.round(c * 9 / 5 + 32);
 }
 
-// generate a short, dynamic suggestion
 function getRandom(arr) {
   return arr[Math.floor(Math.random() * arr.length)];
 }
@@ -88,53 +86,6 @@ export default function ForecastCard({ item, unit }) {
 
   const suggestion = generateSuggestion(temp, desc, unit);
 
-  // ...styles unchanged
-
-  const cardStyle = {
-    background: "#22375e",
-    color: "#e8ecf8",
-    borderRadius: "18px",
-    boxShadow: "0 4px 28px 0 rgba(0,0,0,0.16), 0 2px 10px 0 rgba(20,40,80,0.13)",
-    textAlign: "center",
-    padding: "1.0rem 0.7rem",
-    minWidth: 0,
-    display: "flex",
-    flexDirection: "column",
-    alignItems: "center",
-    gap: "0.4rem",
-    border: "1.5px solid #406bda28",
-  };
-
-  const buttonStyle = {
-    marginTop: "7px",
-    padding: "5.5px 14px",
-    borderRadius: "7px",
-    background: shown ? "#406bda" : "#27496d",
-    color: "#fff",
-    border: "none",
-    fontSize: "1em",
-    cursor: "pointer",
-    transition: "background 0.13s",
-    fontWeight: 600,
-  };
-
-  const dateStyle = {
-    fontSize: "0.92em",
-    color: "#e7ecf9b3",
-  };
-
-  const hourStyle = {
-    fontSize: "1.06em",
-    fontWeight: 500,
-    color: "#ffea8a",
-  };
-
-  const tempStyle = {
-    fontSize: "1.38em",
-    fontWeight: 600,
-    marginBottom: "0.16em",
-  };
-
   const suggestionStyle = {
     marginTop: 8,
     fontStyle: "italic",
@@ -144,27 +95,29 @@ export default function ForecastCard({ item, unit }) {
   };
 
   return (
-    <div style={cardStyle}>
-      <div style={dateStyle}>{date}</div>
-      <div style={hourStyle}>{time}</div>
-      <div style={tempStyle}>
+    <div className="forecast-card">
+      <div className="date">{date}</div>
+      <div className="hour">{time}</div>
+      <div className="temp">
         {temp}°{unit === "metric" ? "C" : "F"}
       </div>
       <div style={{ marginBottom: 8, textTransform: "capitalize" }}>
         <small>{desc}</small>
       </div>
-      {!shown ? (
-        <button onClick={() => setShown(true)} style={buttonStyle}>
-          View suggestion
-        </button>
-      ) : (
-        <>
-          <div style={suggestionStyle}>{suggestion}</div>
-          <button onClick={() => setShown(false)} style={buttonStyle}>
-            Hide suggestion
+      <div className="suggestion-area">
+        {!shown ? (
+          <button onClick={() => setShown(true)}>
+            View suggestion
           </button>
-        </>
-      )}
+        ) : (
+          <>
+            <div style={suggestionStyle}>{suggestion}</div>
+            <button onClick={() => setShown(false)}>
+              Hide suggestion
+            </button>
+          </>
+        )}
+      </div>
     </div>
   );
 }

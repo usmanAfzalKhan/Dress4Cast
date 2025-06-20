@@ -20,6 +20,9 @@ export default function OutfitSuggestion({ weather, unit }) {
   const [error, setError]       = useState("");
   const [expanded, setExpanded] = useState(false);
 
+  // Modal state for the image
+  const [modalOpen, setModalOpen] = useState(false);
+
   // Track the last *location name*, style, and gender
   const lastLocationRef = useRef(null);
   const lastStyleRef    = useRef(style);
@@ -115,6 +118,16 @@ export default function OutfitSuggestion({ weather, unit }) {
     // eslint-disable-next-line
   }, [weather?.name, style, gender, expanded]);
 
+  // Close modal on Esc key
+  useEffect(() => {
+    if (!modalOpen) return;
+    const handleEsc = e => {
+      if (e.key === "Escape") setModalOpen(false);
+    };
+    window.addEventListener("keydown", handleEsc);
+    return () => window.removeEventListener("keydown", handleEsc);
+  }, [modalOpen]);
+
   if (!weather) return null;
 
   return (
@@ -128,7 +141,14 @@ export default function OutfitSuggestion({ weather, unit }) {
       </button>
       {expanded && (
         <>
-          {loading && <div className="loader">Loading suggestion…</div>}
+          {loading && (
+            <div className="ai-loader">
+              <div className="ai-spinner"></div>
+              <span>
+                Loading suggestion<span className="animated-dots"></span>
+              </span>
+            </div>
+          )}
           {error && <div className="error">{error}</div>}
           {!loading && !error && (
             <div className="outfit-content">
@@ -137,24 +157,101 @@ export default function OutfitSuggestion({ weather, unit }) {
                 <p>{text}</p>
               </div>
               {imgUrl && (
-                <img
-                  src={imgUrl}
-                  alt="Outfit suggestion"
-                  className="outfit-image"
-                />
+                <>
+                  <img
+                    src={imgUrl}
+                    alt="Outfit suggestion"
+                    className="outfit-image"
+                    onClick={() => setModalOpen(true)}
+                    style={{ cursor: "zoom-in" }}
+                  />
+                  {modalOpen && (
+                    <div
+                      className="modal-backdrop"
+                      onClick={() => setModalOpen(false)}
+                    >
+                      <button
+                        style={{
+                          position: "absolute",
+                          top: 30,
+                          right: 38,
+                          fontSize: 24,
+                          color: "#fff",
+                          background: "rgba(30,42,70,0.7)",
+                          border: "none",
+                          borderRadius: "50%",
+                          width: 42,
+                          height: 42,
+                          cursor: "pointer",
+                          zIndex: 202,
+                        }}
+                        onClick={e => {
+                          e.stopPropagation();
+                          setModalOpen(false);
+                        }}
+                        aria-label="Close"
+                      >×</button>
+                      <img
+                        src={imgUrl}
+                        alt="Outfit large preview"
+                        className="modal-image"
+                        onClick={e => e.stopPropagation()}
+                      />
+                    </div>
+                  )}
+                </>
               )}
-              <div className="controls">
-                <label>
+              <div className="controls outfit-controls">
+                <label style={{
+                  marginRight: "16px",
+                  display: "flex",
+                  alignItems: "center",
+                  gap: "6px",
+                  fontWeight: 500,
+                  color: "#c2d8f6",
+                }}>
                   Style:
-                  <select value={style} onChange={e => setStyle(e.target.value)}>
+                  <select
+                    value={style}
+                    onChange={e => setStyle(e.target.value)}
+                    style={{
+                      marginLeft: 5,
+                      padding: "4.5px 12px",
+                      borderRadius: 8,
+                      border: "1.5px solid #37598b",
+                      background: "#22375e",
+                      color: "#fff",
+                      fontWeight: 500,
+                      fontSize: "1em",
+                    }}
+                  >
                     {STYLE_OPTIONS.map(o => (
                       <option key={o.value} value={o.value}>{o.label}</option>
                     ))}
                   </select>
                 </label>
-                <label>
+                <label style={{
+                  display: "flex",
+                  alignItems: "center",
+                  gap: "6px",
+                  fontWeight: 500,
+                  color: "#c2d8f6",
+                }}>
                   Gender:
-                  <select value={gender} onChange={e => setGender(e.target.value)}>
+                  <select
+                    value={gender}
+                    onChange={e => setGender(e.target.value)}
+                    style={{
+                      marginLeft: 5,
+                      padding: "4.5px 12px",
+                      borderRadius: 8,
+                      border: "1.5px solid #37598b",
+                      background: "#22375e",
+                      color: "#fff",
+                      fontWeight: 500,
+                      fontSize: "1em",
+                    }}
+                  >
                     {GENDER_OPTIONS.map(o => (
                       <option key={o.value} value={o.value}>{o.label}</option>
                     ))}

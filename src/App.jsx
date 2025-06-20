@@ -64,6 +64,14 @@ export default function App() {
       .catch((e) => setError(e.message));
   }, [location, weather]);
 
+  // Simple hook to detect mobile width
+  const [isMobile, setIsMobile] = useState(window.innerWidth <= 800);
+  useEffect(() => {
+    const handleResize = () => setIsMobile(window.innerWidth <= 800);
+    window.addEventListener("resize", handleResize);
+    return () => window.removeEventListener("resize", handleResize);
+  }, []);
+
   return (
     <>
       <Header onSelectLocation={setLocation} />
@@ -91,33 +99,55 @@ export default function App() {
           >
             {error && <div className="error">⚠️ {error}</div>}
 
-            <AnimatePresence>
-              {weather && (
-                <motion.div
-                  key="weather"
-                  initial={{ opacity: 0, y: 20 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  exit={{ opacity: 0, y: -20 }}
-                  transition={{ duration: 0.5 }}
-                >
+            {/* Desktop: side-by-side, Mobile: stacked */}
+            {!isMobile ? (
+              <>
+                <div className="top-row-desktop">
+                  <div className="weather-side">
+                    {weather && (
+                      <WeatherDisplay
+                        location={location}
+                        unit={unit}
+                        onToggleUnit={toggleUnit}
+                        weather={weather}
+                      />
+                    )}
+                  </div>
+                  <div className="forecast-side">
+                    {forecastData && (
+                      <ForecastList
+                        forecastData={forecastData}
+                        unit={unit}
+                        maxSlots={4}
+                      />
+                    )}
+                  </div>
+                </div>
+                <div className="suggestion-bottom">
+                  {weather && <OutfitSuggestion weather={weather} unit={unit} />}
+                </div>
+              </>
+            ) : (
+              <>
+                {weather && (
                   <WeatherDisplay
                     location={location}
                     unit={unit}
                     onToggleUnit={toggleUnit}
-                    weather={weather} // pass the always-metric weather
+                    weather={weather}
                   />
-                </motion.div>
-              )}
-            </AnimatePresence>
-
-            {weather && <OutfitSuggestion weather={weather} unit={unit} />}
-
-            {forecastData && (
-              <ForecastList
-                forecastData={forecastData}
-                unit={unit}
-                maxSlots={4}
-              />
+                )}
+                <div className="suggestion-bottom">
+                  {weather && <OutfitSuggestion weather={weather} unit={unit} />}
+                </div>
+                {forecastData && (
+                  <ForecastList
+                    forecastData={forecastData}
+                    unit={unit}
+                    maxSlots={4}
+                  />
+                )}
+              </>
             )}
           </motion.main>
         )}
