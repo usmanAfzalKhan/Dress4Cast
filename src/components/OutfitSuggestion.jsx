@@ -1,99 +1,61 @@
 // src/components/OutfitSuggestion.jsx
 import React, { useState, useEffect } from "react";
+import getOutfit from "../utils/getOutfit.js";
 import "./OutfitSuggestion.css";
 
-const STYLE_OPTIONS = [
-  { value: "Stylish", label: "Stylish" },
-  { value: "Casual",  label: "Casual"  },
-  { value: "Sporty",  label: "Sporty"  },
-  { value: "Formal",  label: "Formal"  },
-];
-
-const GENDER_OPTIONS = [
-  { value: "female", label: "Female" },
-  { value: "male",   label: "Male"   },
-];
-
 export default function OutfitSuggestion({ weather, unit }) {
-  const [style, setStyle]       = useState(STYLE_OPTIONS[0].value);
-  const [gender, setGender]     = useState(GENDER_OPTIONS[0].value);
-  const [text, setText]         = useState("");
-  const [imageUrl, setImageUrl] = useState("");
-  const [loading, setLoading]   = useState(false);
-  const [error, setError]       = useState("");
+  const [gender, setGender]   = useState("female");
+  const [modesty, setModesty] = useState("regular");
+  const [imgSrc, setImgSrc]   = useState("");
+  const [error, setError]     = useState("");
 
   useEffect(() => {
     if (!weather) return;
 
-    setLoading(true);
-    setError("");
-    setText("");
-    setImageUrl("");
-
-    // 1) Kick off the background job
+    // 1) Ask the AI which outfit to pick
     fetch("/.netlify/functions/outfit", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ weather, unit, style, gender }),
+      body: JSON.stringify({ weather, unit }),
     })
-      .then(async (res) => {
-        if (res.status !== 202) {
-          // ran inline or errored
-          if (!res.ok) throw new Error(await res.text());
-          return res.json();
-        }
-        // background invocation started
-        const statusUrl = res.headers.get("Location");
-        if (!statusUrl) throw new Error("Missing Location header");
+      .then((r) => r.json())
+      .then(({ gender: g, modesty: m, error: e }) => {
+        if (e) throw new Error(e);
+        setGender(g);
+        setModesty(m);
+      })
+      .catch((e) => {
+        console.error(e);
+        setError("Could not get AI suggestion");
+      });
+  }, [weather, unit]);
 
-        // 2) Poll until the job finishes
-        while (true) {
-          await new Promise((r) => setTimeout(r, 1000));
-          const poll = await fetch(statusUrl);
-          if (poll.status === 202) continue;    // still running
-          if (!poll.ok) throw new Error(await poll.text());
-          return poll.json();                   // done
-        }
-      })
-      .then(({ text: aiText, imageUrl: url }) => {
-        setText(aiText);
-        setImageUrl(url);
-      })
-      .catch((err) => {
-        console.error(err);
-        setError(err.message);
-      })
-      .finally(() => setLoading(false));
-  }, [weather, unit, style, gender]);
+  useEffect(() => {
+    if (!weather) return;
+    // 2) Once AI gives us gender/modesty, pick the local image
+    const tempC = unit === "metric"
+      ? weather.main.temp
+      : (weather.main.temp - 32) * (5/9);
+    const { primaryPath, fallbackPath } = getOutfit(
+      gender,
+      modesty,
+      tempC,
+      weather.weather[0].description
+    );
+    setImgSrc(primaryPath);
+
+    // if the primary 404s, fall back
+    const img = new Image();
+    img.src = primaryPath;
+    img.onerror = () => setImgSrc(fallbackPath);
+  }, [gender, modesty, weather, unit]);
 
   if (!weather) return null;
-  if (loading)   return <div>Loading suggestion…</div>;
-  if (error)     return <div style={{ color: "red" }}>Error: {error}</div>;
+  if (error)   return <div className="error">{error}</div>;
 
   return (
     <div className="outfit-box">
-      <p><strong>What to wear:</strong> {text}</p>
-      {imageUrl && (
-        <img src={imageUrl} alt="Outfit suggestion" className="outfit-image" />
-      )}
-      <div className="controls">
-        <label>
-          Style:{" "}
-          <select value={style} onChange={(e) => setStyle(e.target.value)}>
-            {STYLE_OPTIONS.map((o) => (
-              <option key={o.value} value={o.value}>{o.label}</option>
-            ))}
-          </select>
-        </label>
-        <label>
-          Gender:{" "}
-          <select value={gender} onChange={(e) => setGender(e.target.value)}>
-            {GENDER_OPTIONS.map((o) => (
-              <option key={o.value} value={o.value}>{o.label}</option>
-            ))}
-          </select>
-        </label>
-      </div>
+      <img src={imgSrc} alt="AI-chosen outfit" className="outfit-image" />
     </div>
   );
 }
