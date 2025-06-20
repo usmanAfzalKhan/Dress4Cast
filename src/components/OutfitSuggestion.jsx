@@ -22,7 +22,6 @@ export default function OutfitSuggestion({ weather, unit }) {
   const [loading, setLoading]   = useState(false);
   const [error, setError]       = useState("");
 
-  // pull your Vite‐bundled key
   const OPENAI_KEY = import.meta.env.VITE_OPENAI_KEY;
 
   useEffect(() => {
@@ -33,19 +32,20 @@ export default function OutfitSuggestion({ weather, unit }) {
     setText("");
     setImgUrl("");
 
-    // build prompts
     const temp   = Math.round(weather.main.temp);
     const desc   = weather.weather[0].description;
     const tUnit  = unit === "metric" ? "C" : "F";
     const styleLower  = style.toLowerCase();
     const genderLabel = gender === "male" ? "men's" : "women's";
 
-    const promptText  = `Weather: ${temp}°${tUnit}, ${desc}. Recommend a ${styleLower} ${genderLabel} outfit.`;
-    const promptImage = `A ${styleLower} ${genderLabel} outfit for ${desc}, ${temp}°${tUnit}.`;
+    const promptText  = 
+      `Weather: ${temp}°${tUnit}, ${desc}. Recommend a ${styleLower} ${genderLabel} outfit.`;
+    const promptImage = 
+      `A ${styleLower} ${genderLabel} outfit for ${desc}, ${temp}°${tUnit}.`;
 
     (async () => {
       try {
-        // 1) Chat completion
+        // chat completion
         const chatRes = await fetch("https://api.openai.com/v1/chat/completions", {
           method: "POST",
           headers: {
@@ -60,11 +60,10 @@ export default function OutfitSuggestion({ weather, unit }) {
           }),
         });
         if (!chatRes.ok) throw new Error(`Chat failed: ${await chatRes.text()}`);
-        const chatJson = await chatRes.json();
-        const aiText   = chatJson.choices[0].message.content.trim();
-        setText(aiText);
+        const { choices } = await chatRes.json();
+        setText(choices[0].message.content.trim());
 
-        // 2) Image generation
+        // image generation
         const imgRes = await fetch("https://api.openai.com/v1/images/generations", {
           method: "POST",
           headers: {
@@ -78,8 +77,8 @@ export default function OutfitSuggestion({ weather, unit }) {
           }),
         });
         if (!imgRes.ok) throw new Error(`Image failed: ${await imgRes.text()}`);
-        const imgJson = await imgRes.json();
-        setImgUrl(imgJson.data[0].url);
+        const { data } = await imgRes.json();
+        setImgUrl(data[0].url);
       } catch (e) {
         console.error(e);
         setError(e.message);
@@ -91,17 +90,22 @@ export default function OutfitSuggestion({ weather, unit }) {
 
   if (!weather) return null;
   if (loading)   return <div className="loader">Loading suggestion…</div>;
-  if (error)     return <div className="error">Error: {error}</div>;
+  if (error)     return <div className="error">{error}</div>;
 
   return (
-    <div className="outfit-box">
-      <p><strong>What to wear:</strong> {text}</p>
-      {imgUrl && (
-        <img src={imgUrl} alt="Outfit suggestion" className="outfit-image" />
-      )}
+    <div className={`outfit-box ${style.toLowerCase()} ${gender}`}>
+      <div className="outfit-content">
+        <div className="outfit-text">
+          <strong>What to wear:</strong>
+          <p>{text}</p>
+        </div>
+        {imgUrl && (
+          <img src={imgUrl} alt="Outfit suggestion" className="outfit-image" />
+        )}
+      </div>
       <div className="controls">
         <label>
-          Style:{" "}
+          Style:
           <select value={style} onChange={e => setStyle(e.target.value)}>
             {STYLE_OPTIONS.map(o => (
               <option key={o.value} value={o.value}>{o.label}</option>
@@ -109,7 +113,7 @@ export default function OutfitSuggestion({ weather, unit }) {
           </select>
         </label>
         <label>
-          Gender:{" "}
+          Gender:
           <select value={gender} onChange={e => setGender(e.target.value)}>
             {GENDER_OPTIONS.map(o => (
               <option key={o.value} value={o.value}>{o.label}</option>
