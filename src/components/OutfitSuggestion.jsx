@@ -1,5 +1,5 @@
 // src/components/OutfitSuggestion.jsx
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect } from "react";
 import "./OutfitSuggestion.css";
 
 const STYLE_OPTIONS = [
@@ -15,118 +15,85 @@ const GENDER_OPTIONS = [
 ];
 
 export default function OutfitSuggestion({ weather, unit }) {
-  const cacheRef = useRef({});
-  const [baseWeather, setBaseWeather] = useState(null);
-  useEffect(() => {
-    if (weather && !baseWeather) {
-      setBaseWeather(weather);
-    }
-  }, [weather, baseWeather]);
-
-  const [style, setStyle]     = useState(STYLE_OPTIONS[0].value);
-  const [gender, setGender]   = useState(GENDER_OPTIONS[0].value);
-  const [text, setText]       = useState("");
-  const [imgUrl, setImgUrl]   = useState("");
-  const [loading, setLoading] = useState(false);
-  const [error, setError]     = useState("");
+  const [style, setStyle]       = useState(STYLE_OPTIONS[0].value);
+  const [gender, setGender]     = useState(GENDER_OPTIONS[0].value);
+  const [text, setText]         = useState("");
+  const [imageUrl, setImageUrl] = useState("");
+  const [loading, setLoading]   = useState(false);
+  const [error, setError]       = useState("");
 
   useEffect(() => {
-    if (!baseWeather) return;
-    const key = `${baseWeather.main.temp}-${style}-${gender}`;
-    if (cacheRef.current[key]) {
-      const { text: cachedText, imageUrl: cachedUrl } = cacheRef.current[key];
-      setText(cachedText);
-      setImgUrl(cachedUrl);
-      return;
-    }
+    if (!weather) return;
 
     setLoading(true);
     setError("");
     setText("");
-    setImgUrl("");
+    setImageUrl("");
 
+    // 1) Kick off the background job
     fetch("/.netlify/functions/outfit", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ weather: baseWeather, unit, style, gender }),
+      body: JSON.stringify({ weather, unit, style, gender }),
     })
       .then(async (res) => {
-        console.log("Outfit function response status:", res.status);
-        let json;
-        try {
-          json = await res.json();
-        } catch (e) {
-          console.error("Failed to parse JSON:", e);
-          throw new Error("Invalid JSON response from outfit function");
+        if (res.status !== 202) {
+          // ran inline or errored
+          if (!res.ok) throw new Error(await res.text());
+          return res.json();
         }
-        console.log("Outfit function response JSON:", json);
-        if (!res.ok) {
-          throw new Error(json.error || `Server error ${res.status}`);
+        // background invocation started
+        const statusUrl = res.headers.get("Location");
+        if (!statusUrl) throw new Error("Missing Location header");
+
+        // 2) Poll until the job finishes
+        while (true) {
+          await new Promise((r) => setTimeout(r, 1000));
+          const poll = await fetch(statusUrl);
+          if (poll.status === 202) continue;    // still running
+          if (!poll.ok) throw new Error(await poll.text());
+          return poll.json();                   // done
         }
-        return json;
       })
-      .then(({ text: aiText, imageUrl }) => {
+      .then(({ text: aiText, imageUrl: url }) => {
         setText(aiText);
-        setImgUrl(imageUrl);
-        cacheRef.current[key] = { text: aiText, imageUrl };
+        setImageUrl(url);
       })
       .catch((err) => {
-        console.error("Outfit suggestion error:", err);
+        console.error(err);
         setError(err.message);
       })
       .finally(() => setLoading(false));
-  }, [baseWeather, style, gender, unit]);
+  }, [weather, unit, style, gender]);
 
-  if (!baseWeather) return null;
+  if (!weather) return null;
+  if (loading)   return <div>Loading suggestion…</div>;
+  if (error)     return <div style={{ color: "red" }}>Error: {error}</div>;
 
   return (
     <div className="outfit-box">
-      {loading ? (
-        <div className="loader">
-          Loading suggestion<span className="dots" />
-        </div>
-      ) : error ? (
-        <div className="error">Error: {error}</div>
-      ) : text ? (
-        <>
-          <strong>What to wear:</strong>
-          <p>{text}</p>
-          {imgUrl && (
-            <img
-              src={imgUrl}
-              alt="Outfit suggestion"
-              className="outfit-image"
-              onError={(e) => {
-                console.error("Image load failed:", e);
-                setError("Failed to load outfit image");
-              }}
-            />
-          )}
-
-          <div className="controls">
-            <label>
-              <strong>Style:</strong>{" "}
-              <select value={style} onChange={(e) => setStyle(e.target.value)}>
-                {STYLE_OPTIONS.map((o) => (
-                  <option key={o.value} value={o.value}>
-                    {o.label}
-                  </option>
-                ))}
-              </select>
-            </label>
-            <label>
-              <strong>Gender:</strong>{" "}
-              <select value={gender} onChange={(e) => setGender(e.target.value)}>
-                {GENDER_OPTIONS.map((o) => (
-                  <option key={o.value} value={o.value}>
-                    {o.label}
-                  </option>
-                ))}
-              </select>
-            </label>
-          </div>
-        </>
-      ) : null}
+      <p><strong>What to wear:</strong> {text}</p>
+      {imageUrl && (
+        <img src={imageUrl} alt="Outfit suggestion" className="outfit-image" />
+      )}
+      <div className="controls">
+        <label>
+          Style:{" "}
+          <select value={style} onChange={(e) => setStyle(e.target.value)}>
+            {STYLE_OPTIONS.map((o) => (
+              <option key={o.value} value={o.value}>{o.label}</option>
+            ))}
+          </select>
+        </label>
+        <label>
+          Gender:{" "}
+          <select value={gender} onChange={(e) => setGender(e.target.value)}>
+            {GENDER_OPTIONS.map((o) => (
+              <option key={o.value} value={o.value}>{o.label}</option>
+            ))}
+          </select>
+        </label>
+      </div>
     </div>
   );
 }
