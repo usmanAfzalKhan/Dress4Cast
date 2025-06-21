@@ -1,5 +1,5 @@
 :root {
-  --main-bg: #142850;                /* Royal Pearl Blue */
+  --main-bg: #142850;
   --header-bg: #163161cc;
   --footer-bg: #163161cc;
   --accent: #406bda;
@@ -13,7 +13,7 @@
   --max-content-width: 520px;
 }
 
-/* Base styles and desktop */
+/* Reset and base styles */
 html, body, #root {
   min-height: 100vh;
   margin: 0;
@@ -31,14 +31,12 @@ body {
   display: flex;
   flex-direction: column;
   align-items: center;
-  background: var(--main-bg); /* always royal blue */
   width: 100vw;
   overflow-x: hidden;
 }
 #root {
   width: 100vw;
   min-height: 100vh;
-  background: var(--main-bg);
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -55,7 +53,7 @@ body {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  min-height: 68px;
+  min-height: 75px;
   padding: 0 20px;
   box-shadow: 0 3px 20px rgba(20, 40, 80, 0.14);
   border-bottom: 1.5px solid #1e3555;
@@ -67,14 +65,20 @@ body {
   transition: transform 0.2s cubic-bezier(.4,0,.2,1);
 }
 .header-logo {
-  height: 56px;
-  width: auto;
-  transition: transform 0.2s cubic-bezier(.4,0,.2,1);
+  height: 60px;
+  width: 60px;                /* Make it a perfect square */
+  object-fit: cover;           /* Ensures the image fills the circle */
+  border-radius: 50%;          /* Make it round */
+  transition: 
+    transform 0.2s cubic-bezier(.4,0,.2,1),
+    box-shadow 0.2s cubic-bezier(.4,0,.2,1);
 }
+
 .logo-link:hover .header-logo {
-  transform: scale(1.16);
-  box-shadow: 0 0 20px 0 #406bda55;
+  transform: scale(1.18);                  /* Slightly bigger pop */
+  box-shadow: 0 0 32px 0 #406bda99;        /* More dramatic shadow */
 }
+
 .search-bar {
   flex: 1;
   max-width: 370px;
@@ -136,7 +140,8 @@ body {
 main.app-content {
   width: 100vw;
   min-height: 72vh;
-  margin-top: 104px;
+  margin: 0 auto;
+  margin-top: 0;
   margin-bottom: 92px;
   display: flex;
   flex-direction: column;
@@ -145,21 +150,13 @@ main.app-content {
   background: var(--main-bg);
   box-sizing: border-box;
   padding-bottom: 84px;
+  justify-content: center;
+  position: relative;
+  padding-top: 84px;
 }
 
-/* Intro/Welcome Card */
-.intro-wrapper, .intro {
-  width: 100%;
-  max-width: 520px;
-  background: var(--card-bg);
-  border-radius: var(--radius);
-  box-shadow: var(--shadow);
-  padding: 2.1rem 1.7rem 2.1rem 1.7rem;
-  margin: 36px 0 0 0;
-  text-align: center;
-}
 
-/* WeatherDisplay styling: DARK CARD, white text */
+/* Weather card */
 .weather-card {
   width: 100%;
   max-width: 355px;
@@ -210,7 +207,7 @@ main.app-content {
   box-shadow: 0 1.5px 5px #0002;
 }
 
-/* Outfit suggestion styling: modern, with bigger image */
+/* Outfit suggestion styling */
 .outfit-box {
   width: 100%;
   max-width: 320px;
@@ -411,22 +408,26 @@ main.app-content {
   font-weight: 600;
   margin-bottom: 0.16em;
 }
-.forecast-card button {
+.forecast-card button,
+.forecast-toggle {
   margin-top: 7px;
-  padding: 5.5px 14px;
+  padding: 6.5px 14px;
   border-radius: 7px;
   background: #27496d;
   color: #fff;
   border: none;
-  font-size: 1em;
+  font-size: 1.2em;
   cursor: pointer;
   transition: background 0.13s;
   min-height: 38px;
   display: flex;
   align-items: center;
   justify-content: center;
+  font-weight: 600;
+  outline: none;
 }
-.forecast-card button:hover {
+.forecast-card button:hover,
+.forecast-toggle:hover {
   background: #3d72d3;
 }
 .suggestion-area {
@@ -485,7 +486,7 @@ main.app-content {
   main.app-content {
     padding: 1.2rem 2vw 1.2rem 2vw;
     margin-top: 64px;
-    margin-bottom: 86px; /* More space for footer */
+    margin-bottom: 86px;
     max-width: 100vw;
     width: 100vw;
     gap: 1.4rem;
@@ -502,8 +503,7 @@ main.app-content {
     margin-bottom: 0;
   }
   .weather-card,
-  .outfit-box,
-  .intro-wrapper {
+  .outfit-box {
     margin-bottom: 1.25rem !important;
     margin-top: 0.3rem !important;
     width: 98vw !important;
@@ -569,52 +569,6 @@ main.app-content {
   }
 }
 
-/* Never let content go behind header or footer */
-main.app-content {
-  padding-top: 84px !important;
-  padding-bottom: 84px !important;
-}
-body, #root {
-  background: #142850 !important;
-  min-height: 100vh;
-  width: 100vw;
-  overflow-x: hidden;
-}
-
-/* Desktop dashboard layout additions */
-.top-row-desktop {
-  display: flex;
-  gap: 36px;
-  justify-content: center;
-  align-items: flex-start;
-  margin-bottom: 36px;
-  width: 100%;
-  max-width: 1120px;
-}
-.weather-side {
-  min-width: 340px;
-  flex: 1 1 340px;
-  display: flex;
-  justify-content: flex-end;
-}
-.forecast-side {
-  min-width: 340px;
-  flex: 1 1 340px;
-  display: flex;
-  justify-content: flex-start;
-}
-.suggestion-bottom {
-  display: flex;
-  justify-content: center;
-  margin-top: 0px;
-  margin-bottom: 16px;
-  width: 100%;
-}
-.suggestion-bottom > * {
-  width: 100%;
-  max-width: 520px;
-}
-
 /* Placeholder color in dark input */
 ::-webkit-input-placeholder { color: #bacce5; }
 ::-moz-placeholder { color: #bacce5; }
@@ -631,38 +585,4 @@ body, #root {
 ::-webkit-scrollbar-thumb {
   background: #2a406f;
   border-radius: 7px;
-}
-
-.forecast-toggle {
-  margin-top: 7px;
-  padding: 6.5px 14px;
-  border-radius: 7px;
-  background: #27496d;
-  color: #fff;
-  border: none;
-  font-size: 1.2em;
-  cursor: pointer;
-  transition: background 0.13s;
-  min-height: 38px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-weight: 600;
-  outline: none;
-}
-
-@media (max-width: 800px) {
-  .forecast-toggle {
-    padding: 4px 0;
-    font-size: 1.7em;
-    min-width: 38px;
-    width: 38px;
-    height: 38px;
-    justify-content: center;
-    text-align: center;
-    background: #27496d;
-  }
-  .forecast-toggle:after {
-    content: '';
-  }
 }

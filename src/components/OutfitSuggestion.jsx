@@ -1,3 +1,4 @@
+// src/components/OutfitSuggestion.jsx
 import React, { useState, useEffect, useRef } from "react";
 
 const STYLE_OPTIONS = [
@@ -14,186 +15,144 @@ const GENDER_OPTIONS = [
 export default function OutfitSuggestion({ weather, unit }) {
   const [style, setStyle]       = useState(STYLE_OPTIONS[0].value);
   const [gender, setGender]     = useState(GENDER_OPTIONS[0].value);
-  const [text, setText]         = useState("");
+  const [suggestion, setSuggestion] = useState("");
   const [imgUrl, setImgUrl]     = useState("");
   const [loading, setLoading]   = useState(false);
   const [error, setError]       = useState("");
   const [expanded, setExpanded] = useState(false);
-
-  // Modal state for the image
   const [modalOpen, setModalOpen] = useState(false);
 
-  // Track the last *location name*, style, and gender
-  const lastLocationRef = useRef(null);
-  const lastStyleRef    = useRef(style);
-  const lastGenderRef   = useRef(gender);
-
+  const lastDeps = useRef({ loc: null, style, gender });
   const OPENAI_KEY = import.meta.env.VITE_OPENAI_KEY;
 
   useEffect(() => {
-    // Only run if weather exists and user has expanded
     if (!weather || !expanded) return;
-    // Only fetch if LOCATION, STYLE, or GENDER has changed
+    const loc = weather.name;
     if (
-      lastLocationRef.current === weather.name &&
-      lastStyleRef.current === style &&
-      lastGenderRef.current === gender
-    ) {
-      return; // Nothing changed (incl. unit) — don't regenerate!
-    }
+      lastDeps.current.loc === loc &&
+      lastDeps.current.style === style &&
+      lastDeps.current.gender === gender
+    ) return;
 
     setLoading(true);
     setError("");
-    setText("");
+    setSuggestion("");
     setImgUrl("");
 
     const temp  = Math.round(weather.main.temp);
     const desc  = weather.weather[0].description;
     const unitLabel = unit === "metric" ? "C" : "F";
-    const styleLower  = style.toLowerCase();
-    const genderLabel = gender.toLowerCase();
-
     const promptText =
-      `It's ${temp}°${unitLabel} with ${desc}. Recommend a ${styleLower} ${genderLabel} outfit (list items only, no people).`;
-
+      `It's ${temp}°${unitLabel} with ${desc}. In one friendly paragraph, recommend a ${style.toLowerCase()} ${gender.toLowerCase()} outfit—no lists, just conversational tone.`;
     const promptImage =
-      `High-resolution photo of a ${styleLower} ${genderLabel} outfit displayed on a neutral white background—just the garments and accessories.`;
+      `Photo of a ${style.toLowerCase()} ${gender.toLowerCase()} outfit on a neutral background—no people, clear garments and accessories.`;
 
     (async () => {
       try {
-        // Text completion
-        const chatRes = await fetch(
-          "https://api.openai.com/v1/chat/completions",
-          {
-            method: "POST",
-            headers: {
-              "Content-Type": "application/json",
-              "Authorization": `Bearer ${OPENAI_KEY}`,
-            },
-            body: JSON.stringify({
-              model: "gpt-3.5-turbo",
-              messages: [{ role: "user", content: promptText }],
-              max_tokens: 80,
-              temperature: 0.7,
-            }),
-          }
-        );
-        if (!chatRes.ok) throw new Error(await chatRes.text());
+        const chatRes = await fetch("https://api.openai.com/v1/chat/completions", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "Authorization": `Bearer ${OPENAI_KEY}`,
+          },
+          body: JSON.stringify({
+            model: "gpt-3.5-turbo",
+            messages: [{ role: "user", content: promptText }],
+            max_tokens: 120,
+            temperature: 0.7,
+          }),
+        });
+        if (!chatRes.ok) throw new Error();
         const { choices } = await chatRes.json();
-        setText(choices[0].message.content.trim());
+        setSuggestion(choices[0].message.content.trim());
 
-        // Image generation
-        const imgRes = await fetch(
-          "https://api.openai.com/v1/images/generations",
-          {
-            method: "POST",
-            headers: {
-              "Content-Type": "application/json",
-              "Authorization": `Bearer ${OPENAI_KEY}`,
-            },
-            body: JSON.stringify({
-              prompt: promptImage,
-              n: 1,
-              size: "512x512",
-            }),
-          }
-        );
-        if (!imgRes.ok) throw new Error(await imgRes.text());
+        const imgRes = await fetch("https://api.openai.com/v1/images/generations", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "Authorization": `Bearer ${OPENAI_KEY}`,
+          },
+          body: JSON.stringify({ prompt: promptImage, n: 1, size: "512x512" }),
+        });
+        if (!imgRes.ok) throw new Error();
         const { data } = await imgRes.json();
         setImgUrl(data[0].url);
 
-        // Save current context
-        lastLocationRef.current = weather.name;
-        lastStyleRef.current = style;
-        lastGenderRef.current = gender;
-      } catch (e) {
-        setError(e.message);
+        lastDeps.current = { loc, style, gender };
+      } catch {
+        setError("Sorry, something went wrong. Please try again.");
       } finally {
         setLoading(false);
       }
     })();
-
-    // Only depend on location name, style, gender, and expanded!
-    // DO NOT depend on unit or the full weather object
-    // eslint-disable-next-line
   }, [weather?.name, style, gender, expanded]);
 
-  // Close modal on Esc key
+  // allow ESC to close
   useEffect(() => {
     if (!modalOpen) return;
-    const handleEsc = e => {
-      if (e.key === "Escape") setModalOpen(false);
-    };
-    window.addEventListener("keydown", handleEsc);
-    return () => window.removeEventListener("keydown", handleEsc);
+    const onEsc = e => e.key === "Escape" && setModalOpen(false);
+    window.addEventListener("keydown", onEsc);
+    return () => window.removeEventListener("keydown", onEsc);
   }, [modalOpen]);
 
   if (!weather) return null;
 
   return (
-    <div className={`outfit-box ${style.toLowerCase()} ${gender}`}>
+    <div className="outfit-box">
       <button
         className="expand-toggle"
         onClick={() => setExpanded(e => !e)}
-        style={{ alignSelf: "center" }}
+        style={{ display: "block", margin: "0.5rem auto" }}
       >
         {expanded ? "Hide Outfit Suggestion" : "Show Outfit Suggestion"}
       </button>
+
       {expanded && (
         <>
           {loading && (
             <div className="ai-loader">
-              <div className="ai-spinner"></div>
+              <div className="ai-spinner" />
               <span>
-                Loading suggestion<span className="animated-dots"></span>
+                Loading suggestion
+                <span className="animated-dots" />
               </span>
             </div>
           )}
           {error && <div className="error">{error}</div>}
+
           {!loading && !error && (
             <div className="outfit-content">
-              <div className="outfit-text">
-                <strong>What to wear:</strong>
-                <p>{text}</p>
-              </div>
+              <p className="outfit-text">{suggestion}</p>
+
               {imgUrl && (
                 <>
                   <img
                     src={imgUrl}
-                    alt="Outfit suggestion"
+                    alt="Suggested outfit"
                     className="outfit-image"
                     onClick={() => setModalOpen(true)}
-                    style={{ cursor: "zoom-in" }}
                   />
+                  <div
+                    style={{
+                      fontStyle: "italic",
+                      fontSize: "0.9rem",
+                      color: "#c2d8f6",
+                      textAlign: "center",
+                      marginTop: 6
+                    }}
+                  >
+                    Click the image to enlarge
+                  </div>
+
                   {modalOpen && (
                     <div
                       className="modal-backdrop"
                       onClick={() => setModalOpen(false)}
+                      style={{ background: "transparent" }}       /* no black overlay */
                     >
-                      <button
-                        style={{
-                          position: "absolute",
-                          top: 30,
-                          right: 38,
-                          fontSize: 24,
-                          color: "#fff",
-                          background: "rgba(30,42,70,0.7)",
-                          border: "none",
-                          borderRadius: "50%",
-                          width: 42,
-                          height: 42,
-                          cursor: "pointer",
-                          zIndex: 202,
-                        }}
-                        onClick={e => {
-                          e.stopPropagation();
-                          setModalOpen(false);
-                        }}
-                        aria-label="Close"
-                      >×</button>
                       <img
                         src={imgUrl}
-                        alt="Outfit large preview"
+                        alt="Outfit preview"
                         className="modal-image"
                         onClick={e => e.stopPropagation()}
                       />
@@ -201,15 +160,9 @@ export default function OutfitSuggestion({ weather, unit }) {
                   )}
                 </>
               )}
-              <div className="controls outfit-controls">
-                <label style={{
-                  marginRight: "16px",
-                  display: "flex",
-                  alignItems: "center",
-                  gap: "6px",
-                  fontWeight: 500,
-                  color: "#c2d8f6",
-                }}>
+
+              <div className="outfit-controls">
+                <label style={{ marginRight: 16, color: "#c2d8f6" }}>
                   Style:
                   <select
                     value={style}
@@ -222,7 +175,7 @@ export default function OutfitSuggestion({ weather, unit }) {
                       background: "#22375e",
                       color: "#fff",
                       fontWeight: 500,
-                      fontSize: "1em",
+                      fontSize: "1em"
                     }}
                   >
                     {STYLE_OPTIONS.map(o => (
@@ -230,13 +183,8 @@ export default function OutfitSuggestion({ weather, unit }) {
                     ))}
                   </select>
                 </label>
-                <label style={{
-                  display: "flex",
-                  alignItems: "center",
-                  gap: "6px",
-                  fontWeight: 500,
-                  color: "#c2d8f6",
-                }}>
+
+                <label style={{ color: "#c2d8f6" }}>
                   Gender:
                   <select
                     value={gender}
@@ -249,7 +197,7 @@ export default function OutfitSuggestion({ weather, unit }) {
                       background: "#22375e",
                       color: "#fff",
                       fontWeight: 500,
-                      fontSize: "1em",
+                      fontSize: "1em"
                     }}
                   >
                     {GENDER_OPTIONS.map(o => (
