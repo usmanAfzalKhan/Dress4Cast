@@ -66,8 +66,8 @@ Dress4Cast is an AI-powered style assistant that fuses live weather data with ad
 
 Place your `.png` or `.jpeg` files in a **`screenshots/`** folder at the project root, then reference them like so:
 
-![Home Screen](./screenshots/intro.jpeg)  
-![AI Outfit Suggestion](./screenshots/citySearch.jpeg) 
+![Home Screen](screenshots/intro.jpeg)
+![AI Outfit Suggestion](screenshots/citySearch.jpeg)
 
 ---
 
