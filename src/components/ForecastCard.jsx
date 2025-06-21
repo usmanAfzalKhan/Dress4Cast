@@ -1,91 +1,109 @@
+// src/components/ForecastCard.jsx
+
 import React, { useState } from "react";
 
-// Local C to F converter
-function cToF(c) {
-  return Math.round(c * 9 / 5 + 32);
+// Converts Celsius to Fahrenheit for display when needed
+function cToF(celsius) {
+  return Math.round(celsius * 9 / 5 + 32);
 }
 
+// Selects a random element from an array
 function getRandom(arr) {
   return arr[Math.floor(Math.random() * arr.length)];
 }
 
-function generateSuggestion(temp, desc, unit) {
+/**
+ * Generates a context-aware, one-sentence style suggestion based on
+ * temperature and description. Offers varied wording for rain, snow,
+ * clouds, clear/sunny conditions, or a generic fallback.
+ */
+function generateSuggestion(temp, description, unit) {
   const tUnit = unit === "metric" ? "°C" : "°F";
-  const lower = desc.toLowerCase();
+  const lowerDesc = description.toLowerCase();
 
-  if (lower.includes("rain")) {
-    const suggestions = [
+  if (lowerDesc.includes("rain")) {
+    const options = [
       `Light rain expected with ${temp}${tUnit}. Bring an umbrella and a waterproof jacket.`,
       `Rainy conditions at ${temp}${tUnit}. Waterproof boots and a raincoat are your friends.`,
       `Expect showers and ${temp}${tUnit}. Layer up and grab a hooded jacket.`,
       `Drizzly weather, ${temp}${tUnit}. Consider a rain hat and water-resistant shoes.`,
       `Don't forget your raincoat—${temp}${tUnit} and rain are on the way.`
     ];
-    return getRandom(suggestions);
+    return getRandom(options);
   }
-  if (lower.includes("snow")) {
-    const suggestions = [
+
+  if (lowerDesc.includes("snow")) {
+    const options = [
       `Snowy skies at ${temp}${tUnit}. Bundle up in a warm coat and boots.`,
       `It's snowing and ${temp}${tUnit}. Wear insulated gloves and a scarf.`,
       `Expect snow and temperatures around ${temp}${tUnit}. Thermal socks recommended!`,
       `Chilly and snowy—${temp}${tUnit}. Time for a puffer jacket and hat.`,
       `Snowfall with ${temp}${tUnit}. Waterproof footwear and thick layers will keep you cozy.`
     ];
-    return getRandom(suggestions);
+    return getRandom(options);
   }
-  if (lower.includes("cloud")) {
-    const suggestions = [
+
+  if (lowerDesc.includes("cloud")) {
+    const options = [
       `Overcast skies at ${temp}${tUnit}. Try a cozy hoodie and jeans.`,
       `Cloudy and ${temp}${tUnit}. A light jacket should do the trick.`,
       `It's cloudy with temps around ${temp}${tUnit}. Layer up and stay comfy.`,
       `A bit grey outside—${temp}${tUnit}. Go for a casual sweater and pants.`,
       `Clouds ahead with ${temp}${tUnit}. Keep a windbreaker handy just in case.`
     ];
-    return getRandom(suggestions);
+    return getRandom(options);
   }
-  if (lower.includes("clear") || lower.includes("sun")) {
-    const suggestions = [
+
+  if (lowerDesc.includes("clear") || lowerDesc.includes("sun")) {
+    const options = [
       `Clear skies and ${temp}${tUnit}. Sunglasses and a tee are perfect.`,
       `Sunny with ${temp}${tUnit}. Dress light and bring a hat for sun protection.`,
       `It's bright and ${temp}${tUnit}. Shorts and a tank top will keep you cool.`,
       `Sunny day at ${temp}${tUnit}. Don’t forget sunscreen and comfy sneakers.`,
       `Clear and warm—${temp}${tUnit}. Go for breathable fabrics and light colors.`
     ];
-    return getRandom(suggestions);
+    return getRandom(options);
   }
-  // fallback - always vary wording
-  const fallback = [
-    `Currently ${temp}${tUnit} with ${desc}. Dress comfortably for the conditions.`,
-    `Weather is ${desc}, about ${temp}${tUnit}. Adjust your outfit as needed.`,
-    `Expect ${desc} and ${temp}${tUnit}. Comfort is key today.`,
-    `Conditions: ${desc}, ${temp}${tUnit}. Pick your favorite go-to pieces.`,
-    `${desc} at ${temp}${tUnit}. Choose layers for flexibility.`
+
+  // Generic fallback suggestion varying wording each time
+  const fallbackOptions = [
+    `Currently ${temp}${tUnit} with ${description}. Dress comfortably for the conditions.`,
+    `Weather is ${description}, about ${temp}${tUnit}. Adjust your outfit as needed.`,
+    `Expect ${description} and ${temp}${tUnit}. Comfort is key today.`,
+    `Conditions: ${description}, ${temp}${tUnit}. Pick your favorite go-to pieces.`,
+    `${description} at ${temp}${tUnit}. Choose layers for flexibility.`
   ];
-  return getRandom(fallback);
+  return getRandom(fallbackOptions);
 }
 
+/**
+ * ForecastCard:
+ * Renders date, time, temperature, and description for a single forecast slot.
+ * Displays a button to toggle a context-aware style suggestion beneath the card.
+ */
 export default function ForecastCard({ item, unit }) {
+  // Guard against missing data
   if (!item || !item.main || !item.weather) return null;
 
+  // Format date (MM/DD) and 12-hour time
   const dateObj = new Date(item.dt_txt);
-  const date = dateObj.toLocaleDateString(undefined, {
-    month: "numeric",
-    day: "numeric",
-  });
-  const time = dateObj.toLocaleTimeString(undefined, {
-    hour: "numeric",
-    hour12: true,
-  });
+  const date = dateObj.toLocaleDateString(undefined, { month: "numeric", day: "numeric" });
+  const time = dateObj.toLocaleTimeString(undefined, { hour: "numeric", hour12: true });
 
-  // Always start from metric (°C)
+  // Always start from Celsius value; convert to Fahrenheit if needed
   const tempC = Math.round(item.main.temp);
   const temp = unit === "metric" ? tempC : cToF(tempC);
 
-  const desc = item.weather[0].description;
+  // Description text for weather condition
+  const description = item.weather[0].description;
+
+  // Local state controls whether suggestion is shown
   const [shown, setShown] = useState(false);
 
-  const suggestion = generateSuggestion(temp, desc, unit);
+  // Generate conversational suggestion once per render
+  const suggestion = generateSuggestion(temp, description, unit);
 
+  // Inline style for the suggestion text
   const suggestionStyle = {
     marginTop: 8,
     fontStyle: "italic",
@@ -96,14 +114,21 @@ export default function ForecastCard({ item, unit }) {
 
   return (
     <div className="forecast-card">
+      {/* Date and time */}
       <div className="date">{date}</div>
       <div className="hour">{time}</div>
+
+      {/* Temperature display */}
       <div className="temp">
         {temp}°{unit === "metric" ? "C" : "F"}
       </div>
+
+      {/* Weather description */}
       <div style={{ marginBottom: 8, textTransform: "capitalize" }}>
-        <small>{desc}</small>
+        <small>{description}</small>
       </div>
+
+      {/* Suggestion toggle and content */}
       <div className="suggestion-area">
         {!shown ? (
           <button onClick={() => setShown(true)}>

@@ -1,23 +1,31 @@
 // src/components/Intro.jsx
+
 import React from "react";
 import { motion } from "framer-motion";
 
+/**
+ * Intro component that renders a centered hero section with
+ * animated entrance, explanatory text, and a clickable logo.
+ */
 export default function Intro() {
   return (
     <>
+      {/* Inline styles scoped to this component */}
       <style>
         {`
+          /* Container ensures correct width and spacing below fixed header */
           .intro-hero {
             width: 100vw;
             max-width: 100vw;
             margin: 0;
-            margin-top: 128px; /* <<--- More space from header */
+            margin-top: 128px; /* More space from header */
             display: flex;
             flex-direction: column;
             align-items: center;
             justify-content: flex-start;
             padding: 0;
           }
+          /* Inner card styling: background, shadow, padding, rounded corners */
           .intro-hero-content {
             width: 100%;
             max-width: 530px;
@@ -32,6 +40,7 @@ export default function Intro() {
             opacity: 0.97;
             transition: box-shadow 0.18s cubic-bezier(.4,0,.2,1);
           }
+          /* Heading typography: size, weight, color, subtle text-shadow */
           .intro-hero-content h2 {
             font-size: 2.1rem;
             font-weight: 800;
@@ -40,6 +49,7 @@ export default function Intro() {
             color: #fafbff;
             text-shadow: 0 2px 14px #406bda22;
           }
+          /* Paragraph styling: line height, font weight, color */
           .intro-hero-content p {
             font-size: 1.12rem;
             line-height: 1.54;
@@ -48,6 +58,7 @@ export default function Intro() {
             font-weight: 500;
             letter-spacing: 0.01em;
           }
+          /* Logo link container: centers the logo */
           .intro-logo-link {
             display: flex;
             justify-content: center;
@@ -55,6 +66,7 @@ export default function Intro() {
             margin-bottom: 0;
             text-decoration: none;
           }
+          /* Logo image styling: circular, shadow, border, hover transform */
           .intro-logo-img {
             height: 168px;
             width: 168px;
@@ -72,6 +84,7 @@ export default function Intro() {
             box-shadow: 0 0 52px 0 #406bda99, 0 2px 24px #406bda33;
             border-color: #284577;
           }
+          /* Adjustments for smaller viewports: spacing and sizes */
           @media (max-width: 700px) {
             .intro-hero {
               margin-top: 82px; /* less space on mobile */
@@ -94,7 +107,10 @@ export default function Intro() {
           }
         `}
       </style>
+
+      {/* Wrapper div provides horizontal centering and vertical offset */}
       <div className="intro-hero">
+        {/* Motion div animates entrance with fade + vertical movement */}
         <motion.div
           className="intro-hero-content"
           initial={{ opacity: 0, y: 40 }}
@@ -102,19 +118,22 @@ export default function Intro() {
           exit={{ opacity: 0, y: -24 }}
           transition={{ duration: 0.5 }}
         >
+          {/* Main heading */}
           <h2>Welcome to Dress4Cast!</h2>
+          {/* Explanatory paragraph */}
           <p>
             Discover your perfect look—whatever the weather.<br /><br />
             Just enter a city or drop a pin, hit Go, and let our AI-powered engine instantly serve up the live forecast along with on-point outfit ideas tailored to the skies.<br /><br />
             No more guessing games or last-minute wardrobe changes. Dress4Cast combines real-time weather data with smart style suggestions, guiding you from drizzle to sunshine.<br /><br />
             Our machine learning models analyze temperature, wind, and precipitation to recommend the best outfits for any forecast—so you’re always ready, rain or shine.
           </p>
+          {/* Clickable logo linking to GitHub repository */}
           <a
             className="intro-logo-link"
-            href="https://github.com/usmanAfzalKhan/Dress4Cast" 
+            href="https://github.com/usmanAfzalKhan/Dress4Cast"
             target="_blank"
             rel="noopener noreferrer"
-            title="Visit my GitHub"
+            title="Visit GitHub repository"
           >
             <img
               className="intro-logo-img"

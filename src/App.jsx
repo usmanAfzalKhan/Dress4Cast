@@ -10,29 +10,44 @@ import Footer from "./components/Footer.jsx";
 import "./App.css";
 
 export default function App() {
+  // Holds the user-selected location (string or { lat, lon })
   const [location, setLocation] = useState(null);
-  const [unit, setUnit] = useState("metric"); // "metric" or "imperial" for display only!
-  const [weather, setWeather] = useState(null); // always stores METRIC data
+
+  // Tracks whether temperatures are shown in metric or imperial units
+  const [unit, setUnit] = useState("metric");
+
+  // Stores the current weather data (always fetched in metric)
+  const [weather, setWeather] = useState(null);
+
+  // Stores the 5-day/3-hour forecast data (always fetched in metric)
   const [forecastData, setForecastData] = useState(null);
+
+  // Any error message from API requests
   const [error, setError] = useState("");
 
+  // Toggles the displayed unit between metric and imperial
   const toggleUnit = () =>
     setUnit((u) => (u === "metric" ? "imperial" : "metric"));
 
+  // Builds the appropriate query string based on whether location is a city name or coords
   function buildParam() {
-    if (typeof location === "string")
+    if (typeof location === "string") {
       return `q=${encodeURIComponent(location)}`;
-    if (location?.lat != null && location?.lon != null)
+    }
+    if (location?.lat != null && location?.lon != null) {
       return `lat=${location.lat}&lon=${location.lon}`;
+    }
     return "";
   }
 
-  // Fetch weather ONLY in metric
+  // Fetches the current weather when the location changes
   useEffect(() => {
     if (!location) return;
+
     setError("");
     setWeather(null);
     setForecastData(null);
+
     const key = import.meta.env.VITE_OPENWEATHER_API_KEY;
     const param = buildParam();
 
@@ -47,9 +62,10 @@ export default function App() {
       .catch((e) => setError(e.message));
   }, [location]);
 
-  // Fetch forecast ONLY in metric
+  // Fetches the forecast after the current weather has loaded
   useEffect(() => {
     if (!location || !weather) return;
+
     const key = import.meta.env.VITE_OPENWEATHER_API_KEY;
     const param = buildParam();
 
@@ -64,7 +80,7 @@ export default function App() {
       .catch((e) => setError(e.message));
   }, [location, weather]);
 
-  // Simple hook to detect mobile width
+  // Custom hook: watches window width to set a mobile vs desktop layout flag
   const [isMobile, setIsMobile] = useState(window.innerWidth <= 800);
   useEffect(() => {
     const handleResize = () => setIsMobile(window.innerWidth <= 800);
@@ -74,8 +90,10 @@ export default function App() {
 
   return (
     <>
+      {/* Fixed header with search input */}
       <Header onSelectLocation={setLocation} />
 
+      {/* Animate between intro screen and main app content */}
       <AnimatePresence exitBeforeEnter>
         {!location ? (
           <motion.div
@@ -86,6 +104,7 @@ export default function App() {
             exit={{ opacity: 0 }}
             transition={{ duration: 0.5 }}
           >
+            {/* Splash intro until a location is chosen */}
             <Intro />
           </motion.div>
         ) : (
@@ -97,13 +116,16 @@ export default function App() {
             exit={{ opacity: 0 }}
             transition={{ duration: 0.4 }}
           >
+            {/* Display any API errors */}
             {error && <div className="error">⚠️ {error}</div>}
 
-            {/* Desktop: side-by-side, Mobile: stacked */}
+            {/* Desktop splits weather + forecast side by side;
+                mobile stacks them vertically */}
             {!isMobile ? (
               <>
                 <div className="top-row-desktop">
                   <div className="weather-side">
+                    {/* Current weather card */}
                     {weather && (
                       <WeatherDisplay
                         location={location}
@@ -114,6 +136,7 @@ export default function App() {
                     )}
                   </div>
                   <div className="forecast-side">
+                    {/* Forecast cards */}
                     {forecastData && (
                       <ForecastList
                         forecastData={forecastData}
@@ -124,11 +147,13 @@ export default function App() {
                   </div>
                 </div>
                 <div className="suggestion-bottom">
+                  {/* Outfit suggestion powered by AI */}
                   {weather && <OutfitSuggestion weather={weather} unit={unit} />}
                 </div>
               </>
             ) : (
               <>
+                {/* Mobile layout */}
                 {weather && (
                   <WeatherDisplay
                     location={location}
@@ -153,6 +178,7 @@ export default function App() {
         )}
       </AnimatePresence>
 
+      {/* Fixed footer with credits */}
       <Footer />
     </>
   );
