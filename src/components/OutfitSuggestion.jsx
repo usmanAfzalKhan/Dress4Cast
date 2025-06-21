@@ -113,7 +113,7 @@ export default function OutfitSuggestion({ weather, unit }) {
             <div className="ai-loader">
               <div className="ai-spinner" />
               <span>
-                Loading suggestion
+                Loading AI based suggestion
                 <span className="animated-dots" />
               </span>
             </div>
